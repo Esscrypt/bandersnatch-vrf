@@ -24,7 +24,6 @@ export class RingVRFVerifierWasm {
    * Create a new Ring VRF Verifier instance using WASM
    *
    * @param srsFilePath - Path to SRS file (compressed format)
-   * @param ringSize - Maximum ring size (used to calculate domain size)
    */
   constructor(
     srsFilePath: string,

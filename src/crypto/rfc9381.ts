@@ -84,7 +84,7 @@ export function generateChallengeRfc9381(
  * which is used in the Bandersnatch VRF specification.
  *
  * @param point - Curve point to hash
- * @param mulByCofactor - Whether to multiply by cofactor
+ * @param _mulByCofactor - Whether to multiply by cofactor (currently unused, kept for API compatibility)
  * @returns The hash output
  */
 export function pointToHashRfc9381(

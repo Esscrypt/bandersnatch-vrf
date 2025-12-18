@@ -547,7 +547,7 @@ export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
     )
   }
 
-  logger.debug('[createRingPolynomial] Ring polynomial structure', {
+  console.debug('[createRingPolynomial] Ring polynomial structure', {
     ringKeysCount: ringKeys.length,
     keysetPartSize,
     scalarBitlen,

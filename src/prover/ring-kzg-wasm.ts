@@ -25,10 +25,6 @@ export class RingVRFProverWasm {
    * Create a new Ring VRF Prover instance using WASM
    *
    * @param srsFilePath - Path to SRS file (compressed format)
-   * @param ringSize - Maximum ring size (used to calculate domain size)
-   * @param seedPoint - Optional seed point (defaults to BANDERSNATCH_VRF_CONFIG.ACCUMULATOR_SEED_POINT)
-   * @param paddingPoint - Optional padding point (defaults to BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
-   * @param transcriptLabel - Optional transcript label (defaults to "w3f-ring-vrf-snark")
    */
   constructor(
     srsFilePath: string,

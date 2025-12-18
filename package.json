@@ -16,7 +16,8 @@
     "build": "tsc",
     "test": "bun test",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "docs": "npx typedoc --out docs --entryPoints src/index.ts --entryPointStrategy expand --readme none --name '@pbnj/bandersnatch-vrf' --includeVersion"
   },
   "dependencies": {
     "@pbnj/bandersnatch": "0.1.0",
@@ -25,7 +26,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typedoc": "0.28.15"
   },
   "exports": {
     ".": "./src/index.ts"

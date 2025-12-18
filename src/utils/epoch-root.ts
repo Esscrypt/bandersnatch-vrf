@@ -43,8 +43,6 @@ import { safeError, safeResult } from '@pbnj/types'
  * ============================================================================
  *
  * @param bandersnatchKeys - Sequence of Bandersnatch public keys (32 bytes each)
- * @param keyPairService - Not needed (kept for backward compatibility, can be null)
- * @param validatorSetManager - Not needed (kept for backward compatibility, can be null)
  * @param prover - RingVRFProver instance for computing ring commitment
  * @returns 144-byte ring root commitment with proper metadata
  */
