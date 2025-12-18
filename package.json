@@ -1,0 +1,33 @@
+{
+  "name": "@pbnj/bandersnatch-vrf",
+  "author": "Mihail Kirov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Esscrypt/bandersnatch-vrf.git"
+  },
+  "homepage": "https://github.com/Esscrypt/bandersnatch-vrf",
+  "bugs": {
+    "url": "https://github.com/Esscrypt/bandersnatch-vrf/issues"
+  },
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "dependencies": {
+    "@pbnj/bandersnatch": "0.1.0",
+    "@noble/hashes": "catalog:",
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "5.9.3"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
