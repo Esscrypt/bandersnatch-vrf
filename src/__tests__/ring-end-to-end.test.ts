@@ -19,7 +19,7 @@ import path from 'node:path'
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ring.json
 const testVectorsPath = join(
   __dirname,
-  '../../../../submodules/bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ring.json',
+  './vectors/bandersnatch_sha-512_ell2_ring.json',
 )
 const RING_TEST_VECTORS = JSON.parse(
   readFileSync(testVectorsPath, 'utf-8'),

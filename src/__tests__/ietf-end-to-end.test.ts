@@ -23,7 +23,7 @@ import { generateChallengeRfc9381 } from '../crypto/rfc9381'
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ietf.json
 const testVectorsPath = join(
   __dirname,
-  '../../../../submodules/bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ietf.json',
+  './vectors/bandersnatch_sha-512_ell2_ietf.json',
 )
 const IETF_TEST_VECTORS = JSON.parse(
   readFileSync(testVectorsPath, 'utf-8'),

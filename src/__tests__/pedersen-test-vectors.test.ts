@@ -15,7 +15,7 @@ import { bytesToHex, hexToBytes } from 'viem'
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_pedersen.json
 const testVectorsPath = join(
   __dirname,
-  '../../../../submodules/bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_pedersen.json',
+  './vectors/bandersnatch_sha-512_ell2_pedersen.json',
 )
 const PEDERSEN_TEST_VECTORS = JSON.parse(
   readFileSync(testVectorsPath, 'utf-8'),
