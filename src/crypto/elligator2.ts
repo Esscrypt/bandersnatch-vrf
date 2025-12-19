@@ -28,9 +28,8 @@ import type { EdwardsPoint } from '@noble/curves/abstract/edwards.js'
 import { edwards } from '@noble/curves/abstract/edwards.js'
 import { pow } from '@noble/curves/abstract/modular.js'
 import { sha512 } from '@noble/hashes/sha2.js'
-import { BANDERSNATCH_PARAMS, BandersnatchCurve } from '@pbnjam/bandersnatch'
-import { bytesToHex, logger, mod, modInverse, modSqrt } from '@pbnjam/core'
-import type { CurvePoint } from '@pbnjam/types'
+import { BANDERSNATCH_PARAMS, BandersnatchCurve, mod, modInverse, modSqrt, type CurvePoint } from '@pbnjam/bandersnatch'
+import { bytesToHex } from 'viem'
 
 /**
  * Convert bytes to BigInt using little-endian interpretation (arkworks-compatible)
@@ -101,7 +100,7 @@ export function elligator2HashToCurve(message: Uint8Array): CurvePoint {
 
     return cleared
   } catch (error) {
-    logger.error('Elligator2 hash-to-curve failed', {
+    console.error('Elligator2 hash-to-curve failed', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
@@ -338,7 +337,7 @@ export function elligator2Map(u: bigint): CurvePoint {
   // According to Elligator2 specification, at least one should be a square
   // If neither is a square, this indicates an implementation error
   if (!gx1IsSquare && !gx2IsSquare) {
-    logger.error('Elligator2 mapping error: neither gx1 nor gx2 is a square', {
+    console.error('Elligator2 mapping error: neither gx1 nor gx2 is a square', {
       u: u.toString(16),
       x1: x1.toString(16),
       x2: x2.toString(16),
@@ -360,6 +359,10 @@ export function elligator2Map(u: bigint): CurvePoint {
     x = x2
     y = modSqrt(gx2, p, Bandersnatch.Fp)
     sgn0 = false
+  }
+
+  if (y === null) {
+    throw new Error('Elligator2 mapping failed: y is null')
   }
 
   // Step 6: Adjust y sign to match sgn0
@@ -401,7 +404,7 @@ export function elligator2Map(u: bigint): CurvePoint {
       p,
     )
 
-    logger.error('Elligator2 mapping produced invalid point', {
+    console.error('Elligator2 mapping produced invalid point', {
       v: v.toString(16),
       w: w.toString(16),
       x2: x2.toString(16),
