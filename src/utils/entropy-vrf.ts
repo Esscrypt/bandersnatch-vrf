@@ -35,16 +35,16 @@
  * @fileoverview Entropy VRF signature generation and verification using IETF VRF on Bandersnatch curve
  */
 
-import { BandersnatchCurve } from '@pbnj/bandersnatch'
+import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import {
   getBanderoutFromGamma,
   IETFVRFProver,
   IETFVRFVerifier,
   pointToHashRfc9381,
-} from '@pbnj/bandersnatch-vrf'
+} from '@pbnjam/bandersnatch-vrf'
 import { bytesToHex } from 'viem'
-import type { Safe } from '@pbnj/types'
-import { safeError, safeResult } from '@pbnj/types'
+import type { Safe } from '@pbnjam/types'
+import { safeError, safeResult } from '@pbnjam/types'
 
 /**
  * Gray Paper hardcoded context string for entropy VRF

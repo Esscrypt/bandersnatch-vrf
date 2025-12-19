@@ -4,7 +4,7 @@
  * Implements RFC-9381 VRF proof generation
  */
 
-import { BandersnatchCurve, mod, numberToBytesLittleEndian } from '@pbnj/bandersnatch'
+import { BandersnatchCurve, mod, numberToBytesLittleEndian } from '@pbnjam/bandersnatch'
 import { bytesToHex  } from 'viem'
 import {
   bytesToBigIntLittleEndian,

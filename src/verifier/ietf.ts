@@ -4,7 +4,7 @@
  * Implements verification for IETF VRF scheme
  */
 
-import { BANDERSNATCH_PARAMS, BandersnatchCurve, mod } from '@pbnj/bandersnatch'
+import { BANDERSNATCH_PARAMS, BandersnatchCurve, mod } from '@pbnjam/bandersnatch'
 import { bytesToHex } from 'viem'
 import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'

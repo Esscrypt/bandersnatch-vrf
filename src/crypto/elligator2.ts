@@ -24,13 +24,13 @@
  * https://datatracker.ietf.org/doc/rfc9380/
  */
 
-import type { EdwardsPoint } from '@noble/curves/abstract/edwards'
-import { edwards } from '@noble/curves/abstract/edwards'
-import { pow } from '@noble/curves/abstract/modular'
-import { sha512 } from '@noble/hashes/sha2'
-import { BANDERSNATCH_PARAMS, BandersnatchCurve } from '@pbnj/bandersnatch'
-import { bytesToHex, logger, mod, modInverse, modSqrt } from '@pbnj/core'
-import type { CurvePoint } from '@pbnj/types'
+import type { EdwardsPoint } from '@noble/curves/abstract/edwards.js'
+import { edwards } from '@noble/curves/abstract/edwards.js'
+import { pow } from '@noble/curves/abstract/modular.js'
+import { sha512 } from '@noble/hashes/sha2.js'
+import { BANDERSNATCH_PARAMS, BandersnatchCurve } from '@pbnjam/bandersnatch'
+import { bytesToHex, logger, mod, modInverse, modSqrt } from '@pbnjam/core'
+import type { CurvePoint } from '@pbnjam/types'
 
 /**
  * Convert bytes to BigInt using little-endian interpretation (arkworks-compatible)

@@ -6,10 +6,10 @@
  * Uses custom SRS reading instead of loadTrustedSetup.
  */
 
-import { pippenger } from '@noble/curves/abstract/curve'
+import { pippenger } from '@noble/curves/abstract/curve.js'
 import * as fft from '@noble/curves/abstract/fft.js'
-import { bls12_381 } from '@noble/curves/bls12-381'
-import { BANDERSNATCH_PARAMS } from '@pbnj/bandersnatch'
+import { bls12_381 } from '@noble/curves/bls12-381.js'
+import { BANDERSNATCH_PARAMS } from '@pbnjam/bandersnatch'
 import { bytesToHex } from 'viem'
 import {
   bigintToBytes32BE,

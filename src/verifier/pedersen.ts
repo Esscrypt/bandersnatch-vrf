@@ -9,7 +9,7 @@ import {
   BANDERSNATCH_PARAMS,
   BandersnatchCurve,
   Bandersnatch,
-} from '@pbnj/bandersnatch'
+} from '@pbnjam/bandersnatch'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,

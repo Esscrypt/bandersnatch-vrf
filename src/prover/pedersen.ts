@@ -5,13 +5,13 @@
  * Reference: Bandersnatch VRF specification section 3
  */
 
-import { sha512 } from '@noble/hashes/sha2'
+import { sha512 } from '@noble/hashes/sha2.js'
 import {
   BANDERSNATCH_PARAMS,
   BandersnatchCurve,
   Bandersnatch,
   mod, numberToBytesLittleEndian
-} from '@pbnj/bandersnatch'
+} from '@pbnjam/bandersnatch'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,

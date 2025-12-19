@@ -17,7 +17,7 @@ import {
   curvePointToNoble,
   elligator2HashToCurve,
 } from '../crypto/elligator2'
-import { BandersnatchCurve, mod } from '@pbnj/bandersnatch'
+import { BandersnatchCurve, mod } from '@pbnjam/bandersnatch'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'
 
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ietf.json

@@ -5,9 +5,9 @@
  * Reference: https://www.rfc-editor.org/rfc/rfc8032.html
  */
 
-import { sha512 } from '@noble/hashes/sha2'
-import { BANDERSNATCH_PARAMS } from '@pbnj/bandersnatch'
-import { mod, numberToBytesLittleEndian } from '@pbnj/bandersnatch'
+import { sha512 } from '@noble/hashes/sha2.js'
+import { BANDERSNATCH_PARAMS } from '@pbnjam/bandersnatch'
+import { mod, numberToBytesLittleEndian } from '@pbnjam/bandersnatch'
 import { bytesToBigIntLittleEndian } from './elligator2'
 
 /**

@@ -1,8 +1,8 @@
-# `@pbnj/bandersnatch-vrf`
+# `@pbnjam/bandersnatch-vrf`
 
 Verifiable Random Functions (VRFs) over the Bandersnatch curve.
 
-This package builds on `@pbnj/bandersnatch` and provides:
+This package builds on `@pbnjam/bandersnatch` and provides:
 
 - **IETF VRF** (RFC-9381-style) prover/verifier
 - **Pedersen VRF** prover/verifier (with blinding)
@@ -40,7 +40,7 @@ import {
   generateNonceRfc8032,
   generateChallengeRfc9381,
   pointToHashRfc9381,
-} from '@pbnj/bandersnatch-vrf'
+} from '@pbnjam/bandersnatch-vrf'
 ```
 
 ## Schemes
@@ -117,5 +117,6 @@ bun run build
 
 - Many functions operate on **compressed curve points** (`Uint8Array`, 32 bytes) and scalars in **little-endian** form, matching the in-repo codec expectations.
 - For Ring VRF, you must provide a compatible **SRS file** path when constructing prover/verifier instances.
+
 
 

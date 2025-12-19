@@ -1,7 +1,7 @@
-import type { RingVRFProverWasm } from '@pbnj/bandersnatch-vrf'
+import type { RingVRFProverWasm } from '@pbnjam/bandersnatch-vrf'
 import { type Hex, hexToBytes, zeroHash } from 'viem'
-import type { Safe, ValidatorPublicKeys } from '@pbnj/types'
-import { safeError, safeResult } from '@pbnj/types'
+import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
+import { safeError, safeResult } from '@pbnjam/types'
 
 /**
  * Calculate Bandersnatch ring root from a set of public keys

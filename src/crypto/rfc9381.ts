@@ -5,9 +5,9 @@
  * Reference: https://datatracker.ietf.org/doc/rfc9381/
  */
 
-import { sha512 } from '@noble/hashes/sha2'
-import { BANDERSNATCH_PARAMS, mod } from '@pbnj/bandersnatch'
-import { bytesToBigInt } from 'viem'
+import { sha512 } from '@noble/hashes/sha2.js'
+import { BANDERSNATCH_PARAMS, mod } from '@pbnjam/bandersnatch'
+import { bytesToBigInt } from 'viem/utils'
 
 /**
  * Generate challenge according to RFC-9381

@@ -6,9 +6,9 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { bls12_381 } from '@noble/curves/bls12-381'
-import type { Safe } from '@pbnj/types'
-import { safeError, safeResult } from '@pbnj/types'
+import { bls12_381 } from '@noble/curves/bls12-381.js'
+import type { Safe } from '@pbnjam/types'
+import { safeError, safeResult } from '@pbnjam/types'
 
 /**
  * Load SRS from file and extract G1 and G2 points

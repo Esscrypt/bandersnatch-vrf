@@ -5,11 +5,11 @@
  * Domain size |𝔻| = 2048, so blob has 2048 field elements (not 4096 like c-kzg).
  */
 
-import { bls12_381 } from '@noble/curves/bls12-381'
-import { BANDERSNATCH_PARAMS, BandersnatchCurve, Bandersnatch, mod, modInverse } from '@pbnj/bandersnatch'
+import { bls12_381 } from '@noble/curves/bls12-381.js'
+import { BANDERSNATCH_PARAMS, BandersnatchCurve, Bandersnatch, mod, modInverse } from '@pbnjam/bandersnatch'
 import { hexToBytes } from 'viem'
-import type { Safe } from '@pbnj/types'
-import { safeError, safeResult } from '@pbnj/types'
+import type { Safe } from '@pbnjam/types'
+import { safeError, safeResult } from '@pbnjam/types'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 
 /**

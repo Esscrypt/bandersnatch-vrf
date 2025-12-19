@@ -31,7 +31,7 @@ function hexToBytes(hex: string): Uint8Array {
 function debugBytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
 }
-import { BandersnatchCurve } from '@pbnj/bandersnatch'
+import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { getCommitmentFromGamma } from '../utils/gamma.js'
 
 // Test vectors from submodules/ark-vrf/data/vectors/bandersnatch_sha-512_ell2_ring.json

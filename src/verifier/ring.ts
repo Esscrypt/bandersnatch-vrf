@@ -8,7 +8,7 @@
  * 4. θ ← θ₀ ∧ θ₁ - Both verifications must pass
  */
 
-import { BANDERSNATCH_PARAMS } from '@pbnj/bandersnatch'
+import { BANDERSNATCH_PARAMS } from '@pbnjam/bandersnatch'
 import { PedersenVRFProver } from '../prover/pedersen'
 import type { RingVRFInput } from '../prover/ring-kzg'
 import { loadSRSFromFile } from '../utils/srs-loader'
