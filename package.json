@@ -20,7 +20,7 @@
     "docs": "npx typedoc --out docs --entryPoints src/index.ts --entryPointStrategy expand --readme none --name '@pbnjam/bandersnatch-vrf' --includeVersion"
   },
   "dependencies": {
-    "@pbnjam/bandersnatch": "0.1.0",
+    "@pbnjam/bandersnatch": "0.7.2-rc0",
     "@noble/hashes": "^2.0.1",
     "viem": "^2.0.0"
   },
