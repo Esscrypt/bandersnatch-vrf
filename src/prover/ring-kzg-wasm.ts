@@ -26,9 +26,7 @@ export class RingVRFProverWasm {
    *
    * @param srsFilePath - Path to SRS file (compressed format)
    */
-  constructor(
-    srsFilePath: string,
-  ) {
+  constructor(srsFilePath: string) {
     // Load SRS file (expects uncompressed arkworks format)
     // Replace '-compressed.bin' with '-uncompressed.bin' if needed
     this.srsBytes = readFileSync(srsFilePath)
@@ -38,7 +36,10 @@ export class RingVRFProverWasm {
 
   async init(): Promise<void> {
     // Load WASM module - pass the WASM file path directly to avoid import.meta.url issues in Bun
-    const wasmPath = new URL('../../wasm-ark-vrf/ark_vrf_wasm_bg.wasm', import.meta.url)
+    const wasmPath = new URL(
+      '../../wasm-ark-vrf/ark_vrf_wasm_bg.wasm',
+      import.meta.url,
+    )
     await initWasm(wasmPath.toString())
     this.wasmInitialized = true
   }
@@ -53,8 +54,10 @@ export class RingVRFProverWasm {
    */
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
     if (!this.wasmInitialized) {
-      throw new Error('WASM module not initialized yet. Please wait for initialization to complete. ' +
-        'You can await wasmInitPromise from ring-kzg-wasm if needed.')
+      throw new Error(
+        'WASM module not initialized yet. Please wait for initialization to complete. ' +
+          'You can await wasmInitPromise from ring-kzg-wasm if needed.',
+      )
     }
 
     // Step 1: Generate Pedersen VRF proof (TypeScript implementation)
@@ -80,7 +83,6 @@ export class RingVRFProverWasm {
         input.ringKeys.length, // ring_size
       )
       ringCommitment = new Uint8Array(commitmentBytes)
-
     } catch (error) {
       console.error('[RingVRFProverWasm] Failed to compute ring commitment', {
         error: error instanceof Error ? error.message : String(error),
@@ -133,10 +135,12 @@ export class RingVRFProverWasm {
    */
   computeRingCommitment(ringKeys: Uint8Array[]): Uint8Array {
     if (!this.wasmInitialized) {
-      throw new Error('WASM module not initialized yet. Please wait for initialization to complete. ' +
-        'You can await wasmInitPromise from ring-kzg-wasm if needed.')
+      throw new Error(
+        'WASM module not initialized yet. Please wait for initialization to complete. ' +
+          'You can await wasmInitPromise from ring-kzg-wasm if needed.',
+      )
     }
-    
+
     // Serialize ring keys
     const ringKeysBytes = new Uint8Array(ringKeys.length * 32)
     for (let i = 0; i < ringKeys.length; i++) {
@@ -153,4 +157,3 @@ export class RingVRFProverWasm {
     return new Uint8Array(commitmentBytes)
   }
 }
-

@@ -42,9 +42,9 @@ import {
   IETFVRFVerifier,
   pointToHashRfc9381,
 } from '@pbnjam/bandersnatch-vrf'
-import { bytesToHex } from 'viem'
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
+import { bytesToHex } from 'viem'
 
 /**
  * Gray Paper hardcoded context string for entropy VRF

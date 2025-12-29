@@ -28,7 +28,14 @@ import type { EdwardsPoint } from '@noble/curves/abstract/edwards.js'
 import { edwards } from '@noble/curves/abstract/edwards.js'
 import { pow } from '@noble/curves/abstract/modular.js'
 import { sha512 } from '@noble/hashes/sha2.js'
-import { BANDERSNATCH_PARAMS, BandersnatchCurve, mod, modInverse, modSqrt, type CurvePoint } from '@pbnjam/bandersnatch'
+import {
+  BANDERSNATCH_PARAMS,
+  BandersnatchCurve,
+  type CurvePoint,
+  mod,
+  modInverse,
+  modSqrt,
+} from '@pbnjam/bandersnatch'
 import { bytesToHex } from 'viem'
 
 /**
@@ -76,7 +83,6 @@ const Bandersnatch = edwards({
  * // Hash a message to a curve point
  * const message = new TextEncoder().encode("Hello, VRF!");
  * const point = elligator2HashToCurve(message);
- * console.log(`Point: (${point.x}, ${point.y})`);
  *
  * // Hash empty input (common in test vectors)
  * const emptyPoint = elligator2HashToCurve(new Uint8Array(0));
@@ -100,7 +106,7 @@ export function elligator2HashToCurve(message: Uint8Array): CurvePoint {
 
     return cleared
   } catch (error) {
-    console.error('Elligator2 hash-to-curve failed', {
+    console.error('[Elligator2] hash-to-curve failed', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })

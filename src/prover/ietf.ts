@@ -4,8 +4,12 @@
  * Implements RFC-9381 VRF proof generation
  */
 
-import { BandersnatchCurve, mod, numberToBytesLittleEndian } from '@pbnjam/bandersnatch'
-import { bytesToHex  } from 'viem'
+import {
+  BandersnatchCurve,
+  mod,
+  numberToBytesLittleEndian,
+} from '@pbnjam/bandersnatch'
+import { bytesToHex } from 'viem'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
@@ -130,10 +134,7 @@ export class IETFVRFProver {
     // where Y = publicKey, I = alpha, O = gamma, k·G = gToS, k·I = hToC
     const publicKeyPoint = BandersnatchCurve.scalarMultiply(
       BandersnatchCurve.GENERATOR,
-      mod(
-        bytesToBigIntLittleEndian(secretKey),
-        BandersnatchCurve.CURVE_ORDER,
-      ),
+      mod(bytesToBigIntLittleEndian(secretKey), BandersnatchCurve.CURVE_ORDER),
     )
     const challengePoints = [
       BandersnatchCurve.pointToBytes(publicKeyPoint), // Y

@@ -8,9 +8,10 @@
 import { sha512 } from '@noble/hashes/sha2.js'
 import {
   BANDERSNATCH_PARAMS,
-  BandersnatchCurve,
   Bandersnatch,
-  mod, numberToBytesLittleEndian
+  BandersnatchCurve,
+  mod,
+  numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
 import {
   bytesToBigIntLittleEndian,
@@ -228,9 +229,7 @@ export class PedersenVRFProver {
     // Use Elligator2 hash-to-curve for proper implementation
     const point = elligator2HashToCurve(message)
     // Convert CurvePoint to bytes using the compression function from elligator2
-    const compressed = BandersnatchCurve.pointToBytes(
-      curvePointToNoble(point),
-    )
+    const compressed = BandersnatchCurve.pointToBytes(curvePointToNoble(point))
     return compressed
   }
 
@@ -278,10 +277,7 @@ export class PedersenVRFProver {
     )
 
     // Y_bar = x*G + b*B
-    const xG = BandersnatchCurve.scalarMultiply(
-      BandersnatchCurve.GENERATOR,
-      x,
-    )
+    const xG = BandersnatchCurve.scalarMultiply(BandersnatchCurve.GENERATOR, x)
     const blindingBase = this.getBlindingBase()
     const bB = BandersnatchCurve.scalarMultiply(blindingBase, b)
     const Y_bar = BandersnatchCurve.add(xG, bB)

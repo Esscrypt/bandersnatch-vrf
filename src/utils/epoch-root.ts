@@ -1,7 +1,7 @@
 import type { RingVRFProverWasm } from '@pbnjam/bandersnatch-vrf'
-import { type Hex, hexToBytes, zeroHash } from 'viem'
 import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
+import { type Hex, hexToBytes, zeroHash } from 'viem'
 
 /**
  * Calculate Bandersnatch ring root from a set of public keys
@@ -125,7 +125,6 @@ export function extractRingKeysFromValidatorSet(
   return safeResult(sortedRingKeys)
 }
 
-
 /**
  * Verify that epoch root structure is valid for the validator set
  *
@@ -155,23 +154,23 @@ export function verifyEpochRoot(
   epochRoot: Hex,
   pendingSet: ValidatorPublicKeys[],
 ): Safe<boolean> {
-    // Step 1: Extract ring keys from validator set
-    const [extractError, ringKeys] = extractRingKeysFromValidatorSet(pendingSet)
-    if (extractError) {
-      return safeError(extractError)
-    }
+  // Step 1: Extract ring keys from validator set
+  const [extractError, ringKeys] = extractRingKeysFromValidatorSet(pendingSet)
+  if (extractError) {
+    return safeError(extractError)
+  }
 
-    if (!ringKeys || ringKeys.length === 0) {
-      return safeError(new Error('No valid ring keys found in validator set'))
-    }
+  if (!ringKeys || ringKeys.length === 0) {
+    return safeError(new Error('No valid ring keys found in validator set'))
+  }
 
-    // Step 2: Convert epoch root to bytes
-    const epochRootBytes = hexToBytes(epochRoot)
+  // Step 2: Convert epoch root to bytes
+  const epochRootBytes = hexToBytes(epochRoot)
 
-    // Step 3: Verify epoch root structure
-    if(epochRootBytes.length !== 144) {
-      return safeError(new Error('Epoch root must be 144 bytes'))
-    }
+  // Step 3: Verify epoch root structure
+  if (epochRootBytes.length !== 144) {
+    return safeError(new Error('Epoch root must be 144 bytes'))
+  }
 
-    return safeResult(true)
+  return safeResult(true)
 }

@@ -4,7 +4,11 @@
  * Implements verification for IETF VRF scheme
  */
 
-import { BANDERSNATCH_PARAMS, BandersnatchCurve, mod } from '@pbnjam/bandersnatch'
+import {
+  BANDERSNATCH_PARAMS,
+  BandersnatchCurve,
+  mod,
+} from '@pbnjam/bandersnatch'
 import { bytesToHex } from 'viem'
 import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'
@@ -98,17 +102,11 @@ export class IETFVRFVerifier {
       s,
     )
     const yToC = BandersnatchCurve.scalarMultiply(publicKeyPoint, c)
-    const u = BandersnatchCurve.add(
-      gToS,
-      BandersnatchCurve.negate(yToC),
-    )
+    const u = BandersnatchCurve.add(gToS, BandersnatchCurve.negate(yToC))
 
     const hToS = BandersnatchCurve.scalarMultiply(alphaPoint, s)
     const gammaToC = BandersnatchCurve.scalarMultiply(gammaPoint, c)
-    const v = BandersnatchCurve.add(
-      hToS,
-      BandersnatchCurve.negate(gammaToC),
-    )
+    const v = BandersnatchCurve.add(hToS, BandersnatchCurve.negate(gammaToC))
 
     // Recreate challenge c according to bandersnatch-vrf-spec section 2.3 Verify step 4:
     // c' ← challenge(Y, I, O, U, V, ad)

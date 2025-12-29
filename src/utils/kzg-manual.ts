@@ -6,10 +6,16 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { BANDERSNATCH_PARAMS, BandersnatchCurve, Bandersnatch, mod, modInverse } from '@pbnjam/bandersnatch'
-import { hexToBytes } from 'viem'
+import {
+  BANDERSNATCH_PARAMS,
+  Bandersnatch,
+  BandersnatchCurve,
+  mod,
+  modInverse,
+} from '@pbnjam/bandersnatch'
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
+import { hexToBytes } from 'viem'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 
 /**
@@ -51,10 +57,7 @@ const BLS12_381_SCALAR_FIELD_ORDER = bls12_381.fields.Fr.ORDER
  * @param z - Evaluation point (bigint)
  * @returns Polynomial evaluation result y = p(z) (bigint)
  */
-export function evaluatePolynomialAt(
-  polynomial: bigint[],
-  z: bigint,
-): bigint {
+export function evaluatePolynomialAt(polynomial: bigint[], z: bigint): bigint {
   // BLS12-381 scalar field order (r) - NOT base field order!
   // For BLS12-381: scalar field Fr has order r (curve order)
   // Base field Fp has a different order
@@ -108,7 +111,6 @@ export function polynomialToBlob(polynomial: bigint[]): Uint8Array {
   return blob
 }
 
-
 /**
  * Convert 32-byte big-endian bytes to bigint
  */
@@ -128,9 +130,7 @@ function bytes32BEToBigint(bytes: Uint8Array): bigint {
  */
 export function blobToPolynomial(blob: Uint8Array): bigint[] {
   if (blob.length !== BYTES_PER_BLOB) {
-    throw new Error(
-      `Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`,
-    )
+    throw new Error(`Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`)
   }
 
   const polynomial: bigint[] = []
@@ -163,9 +163,7 @@ export function blobToKzgCommitment(
 ): Safe<Uint8Array> {
   if (blob.length !== BYTES_PER_BLOB) {
     return safeError(
-      new Error(
-        `Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`,
-      ),
+      new Error(`Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`),
     )
   }
 
@@ -231,16 +229,12 @@ export function computeBlobKzgProof(
 ): Safe<Uint8Array> {
   if (blob.length !== BYTES_PER_BLOB) {
     return safeError(
-      new Error(
-        `Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`,
-      ),
+      new Error(`Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`),
     )
   }
 
   if (zBytes.length !== 32) {
-    return safeError(
-      new Error(`z must be 32 bytes, got ${zBytes.length}`),
-    )
+    return safeError(new Error(`z must be 32 bytes, got ${zBytes.length}`))
   }
 
   // Extract polynomial coefficients
@@ -371,7 +365,7 @@ export function verifyKzgProof(
         : new Error(`KZG proof verification failed: ${String(error)}`),
     )
   }
-  }
+}
 
 /**
  * Extract x and y coordinate vectors from ring keys
@@ -396,7 +390,7 @@ export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
   const paddingPoint = BandersnatchCurve.bytesToPoint(paddingPointBytes)
   const paddingX = BigInt(paddingPoint.x.toString())
   const paddingY = BigInt(paddingPoint.y.toString())
-  
+
   // Pre-compute negated padding values (used for idle rows)
   // Note: paddingX and paddingY are already in [0, fieldModulus) range, so no reduction needed
   const negPaddingX = mod(-paddingX, fieldModulus)
@@ -478,23 +472,23 @@ export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
  */
 /**
  * Create ring polynomial matching w3f-ring-proof structure
-   *
-   * Rust reference: Ring::with_keys() constructs:
-   * [(pk1 - padding), ..., (pkn - padding),
-   *  (H - padding), ..., (2^(s-1)H - padding),
-   *  -padding, -padding, -padding, -padding,
-   *  padding]
-   *
-   * Where:
-   * - keys: ringKeys (n keys)
-   * - powers of H: H, 2H, 4H, ..., 2^(s-1)H (s = scalar_bitlen = 253)
-   * - idle rows: 4 zeros (IDLE_ROWS = 4)
-   * - final padding: 1 padding point
-   *
-   * Total length: keys.len() + (keyset_part_size - keys.len()) + scalar_bitlen + 4 + 1
-   * = keyset_part_size + scalar_bitlen + 5
-   * = domain_size - 1
-   */
+ *
+ * Rust reference: Ring::with_keys() constructs:
+ * [(pk1 - padding), ..., (pkn - padding),
+ *  (H - padding), ..., (2^(s-1)H - padding),
+ *  -padding, -padding, -padding, -padding,
+ *  padding]
+ *
+ * Where:
+ * - keys: ringKeys (n keys)
+ * - powers of H: H, 2H, 4H, ..., 2^(s-1)H (s = scalar_bitlen = 253)
+ * - idle rows: 4 zeros (IDLE_ROWS = 4)
+ * - final padding: 1 padding point
+ *
+ * Total length: keys.len() + (keyset_part_size - keys.len()) + scalar_bitlen + 4 + 1
+ * = keyset_part_size + scalar_bitlen + 5
+ * = domain_size - 1
+ */
 export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
   const maxRingSize = BANDERSNATCH_PARAMS.KZG_CONFIG.MAX_RING_SIZE
 
@@ -561,18 +555,17 @@ export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
   return polynomial
 }
 
+/**
+ * Convert bigint to 32-byte big-endian representation
+ */
+export function bigintToBytes32BE(value: bigint): Uint8Array {
+  const bytes = new Uint8Array(32)
+  let val = value
 
-  /**
-   * Convert bigint to 32-byte big-endian representation
-   */
-  export function bigintToBytes32BE(value: bigint): Uint8Array {
-    const bytes = new Uint8Array(32)
-    let val = value
-
-    for (let i = 31; i >= 0; i--) {
-      bytes[i] = Number(val & 0xffn)
-      val = val >> 8n
-    }
-
-    return bytes
+  for (let i = 31; i >= 0; i--) {
+    bytes[i] = Number(val & 0xffn)
+    val = val >> 8n
   }
+
+  return bytes
+}

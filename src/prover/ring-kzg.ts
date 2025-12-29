@@ -347,91 +347,91 @@ export class RingVRFProver {
    * Generate Ring VRF proof and output
    */
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
-      console.debug('Generating Ring VRF proof', {
-        ringSize: input.ringKeys.length,
-        proverIndex: input.proverIndex,
-        inputLength: input.input.length,
-      })
+    console.debug('Generating Ring VRF proof', {
+      ringSize: input.ringKeys.length,
+      proverIndex: input.proverIndex,
+      inputLength: input.input.length,
+    })
 
-      // Step 1: Generate Pedersen VRF proof
-      console.debug('Starting Pedersen VRF proof generation')
-      const pedersenInput = {
-        input: input.input,
-        auxData: input.auxData,
-      }
-      const pedersenResult = PedersenVRFProver.prove(secretKey, pedersenInput)
-      console.debug('Pedersen VRF proof generation completed')
+    // Step 1: Generate Pedersen VRF proof
+    console.debug('Starting Pedersen VRF proof generation')
+    const pedersenInput = {
+      input: input.input,
+      auxData: input.auxData,
+    }
+    const pedersenResult = PedersenVRFProver.prove(secretKey, pedersenInput)
+    console.debug('Pedersen VRF proof generation completed')
 
-      console.debug('Pedersen VRF proof generated', {
-        outputHash: bytesToHex(pedersenResult.hash),
-        proofLength: pedersenResult.proof.length,
-      })
+    console.debug('Pedersen VRF proof generated', {
+      outputHash: bytesToHex(pedersenResult.hash),
+      proofLength: pedersenResult.proof.length,
+    })
 
-      // Step 2: Create ring polynomial from public keys
-      const ringPolynomial = createRingPolynomial(input.ringKeys)
+    // Step 2: Create ring polynomial from public keys
+    const ringPolynomial = createRingPolynomial(input.ringKeys)
 
-      console.debug('Ring polynomial created', {
-        degree: ringPolynomial.length - 1,
-        coefficientsPreview: ringPolynomial
-          .slice(0, 3)
-          .map((c) => c.toString(16))
-          .join(', '),
-      })
+    console.debug('Ring polynomial created', {
+      degree: ringPolynomial.length - 1,
+      coefficientsPreview: ringPolynomial
+        .slice(0, 3)
+        .map((c) => c.toString(16))
+        .join(', '),
+    })
 
-      // Step 3: Generate KZG commitment to ring polynomial
-      const ringBlob = polynomialToBlob(ringPolynomial)
+    // Step 3: Generate KZG commitment to ring polynomial
+    const ringBlob = polynomialToBlob(ringPolynomial)
 
-      const [commitmentError, ringCommitment] = blobToKzgCommitment(
-        ringBlob,
+    const [commitmentError, ringCommitment] = blobToKzgCommitment(
+      ringBlob,
       this.srsG1Points,
+    )
+    if (commitmentError || !ringCommitment) {
+      throw new Error(
+        `Failed to compute ring commitment: ${commitmentError?.message ?? 'unknown error'}`,
       )
-      if (commitmentError || !ringCommitment) {
-        throw new Error(
-          `Failed to compute ring commitment: ${commitmentError?.message ?? 'unknown error'}`,
-        )
-      }
+    }
 
-      console.debug('Ring commitment generated', {
-        commitment: bytesToHex(ringCommitment),
-        blobSize: ringBlob.length,
-      })
+    console.debug('Ring commitment generated', {
+      commitment: bytesToHex(ringCommitment),
+      blobSize: ringBlob.length,
+    })
 
-      // Step 4: Generate KZG proof for prover's key membership
-      // For ring proofs, we use the domain generator as the evaluation point
-      const domainGenerator = BANDERSNATCH_PARAMS.KZG_CONFIG.DOMAIN_GENERATOR
-      const zBytes = bigintToBytes32BE(domainGenerator)
+    // Step 4: Generate KZG proof for prover's key membership
+    // For ring proofs, we use the domain generator as the evaluation point
+    const domainGenerator = BANDERSNATCH_PARAMS.KZG_CONFIG.DOMAIN_GENERATOR
+    const zBytes = bigintToBytes32BE(domainGenerator)
 
-      const [proofError, ringProof] = computeBlobKzgProof(
-        ringBlob,
-        zBytes,
+    const [proofError, ringProof] = computeBlobKzgProof(
+      ringBlob,
+      zBytes,
       this.srsG1Points,
+    )
+    if (proofError || !ringProof) {
+      throw new Error(
+        `Failed to compute ring proof: ${proofError?.message ?? 'unknown error'}`,
       )
-      if (proofError || !ringProof) {
-        throw new Error(
-          `Failed to compute ring proof: ${proofError?.message ?? 'unknown error'}`,
-        )
-      }
+    }
 
-      console.debug('Ring membership proof generated', {
-        proof: bytesToHex(ringProof),
-      })
+    console.debug('Ring membership proof generated', {
+      proof: bytesToHex(ringProof),
+    })
 
-      // Evaluate polynomial at z to get y
-      const y = evaluatePolynomialAt(ringPolynomial, domainGenerator)
-      const yBytes = bigintToBytes32BE(y)
+    // Evaluate polynomial at z to get y
+    const y = evaluatePolynomialAt(ringPolynomial, domainGenerator)
+    const yBytes = bigintToBytes32BE(y)
 
-      const [verifyError, isValid] = verifyKzgProof(
-        ringCommitment,
-        zBytes,
-        yBytes,
-        ringProof,
+    const [verifyError, isValid] = verifyKzgProof(
+      ringCommitment,
+      zBytes,
+      yBytes,
+      ringProof,
       this.srsG1,
       this.srsG2,
       this.srsG2Tau,
     )
 
     // Debug logging when verification fails
-      if (verifyError || !isValid) {
+    if (verifyError || !isValid) {
       console.error('KZG proof verification failed - debugging info', {
         commitment: bytesToHex(ringCommitment),
         zBytes: bytesToHex(zBytes),
@@ -444,22 +444,22 @@ export class RingVRFProver {
         verifyError: verifyError?.message,
         isValid,
       })
-        throw new Error(
-          `Generated ring proof failed verification: ${verifyError?.message ?? 'proof invalid'}`,
-        )
-      }
+      throw new Error(
+        `Generated ring proof failed verification: ${verifyError?.message ?? 'proof invalid'}`,
+      )
+    }
 
-      console.debug('Ring VRF proof verification passed')
+    console.debug('Ring VRF proof verification passed')
 
-      return {
-        gamma: pedersenResult.gamma,
-        proof: {
-          pedersenProof: pedersenResult.proof,
-          ringCommitment,
-          ringProof,
-          proverIndex: input.proverIndex, // In anonymous version, this would be omitted
-        },
-      }
+    return {
+      gamma: pedersenResult.gamma,
+      proof: {
+        pedersenProof: pedersenResult.proof,
+        ringCommitment,
+        ringProof,
+        proverIndex: input.proverIndex, // In anonymous version, this would be omitted
+      },
+    }
   }
 
   /**
@@ -628,51 +628,51 @@ export class RingVRFProver {
    * Verify Ring VRF proof
    */
   verify(input: RingVRFInput, result: RingVRFResult): boolean {
-      console.debug('Verifying Ring VRF proof', {
-        ringSize: input.ringKeys.length,
-        outputLength: result.gamma.length,
-        proofLength: result.proof.pedersenProof.length,
-      })
+    console.debug('Verifying Ring VRF proof', {
+      ringSize: input.ringKeys.length,
+      outputLength: result.gamma.length,
+      proofLength: result.proof.pedersenProof.length,
+    })
 
-      // Step 2: Verify ring membership proof
-      // Recreate ring polynomial
-      const ringPolynomial = createRingPolynomial(input.ringKeys)
+    // Step 2: Verify ring membership proof
+    // Recreate ring polynomial
+    const ringPolynomial = createRingPolynomial(input.ringKeys)
 
-      const domainGenerator = BANDERSNATCH_PARAMS.KZG_CONFIG.DOMAIN_GENERATOR
-      const zBytes = bigintToBytes32BE(domainGenerator)
+    const domainGenerator = BANDERSNATCH_PARAMS.KZG_CONFIG.DOMAIN_GENERATOR
+    const zBytes = bigintToBytes32BE(domainGenerator)
 
-      // Evaluate polynomial at z to get y = p(z)
-      const y = evaluatePolynomialAt(ringPolynomial, domainGenerator)
-      const yBytes = bigintToBytes32BE(y)
+    // Evaluate polynomial at z to get y = p(z)
+    const y = evaluatePolynomialAt(ringPolynomial, domainGenerator)
+    const yBytes = bigintToBytes32BE(y)
 
-      // Verify KZG proof with correct parameters:
-      // 1. commitmentBytes - the ring commitment
-      // 2. zBytes - evaluation point (domain generator)
-      // 3. yBytes - evaluation result y = p(z)
-      // 4. proofBytes - the ring proof
-      // 5. srsG1 - SRS G1 generator
-      // 6. srsG2 - SRS G2 generator
-      // 7. srsG2Tau - SRS G2 point τ*G2
-      const [ringValidError, ringValid] = verifyKzgProof(
-        result.proof.ringCommitment, // commitmentBytes (48 bytes)
-        zBytes, // zBytes - domain generator (32 bytes)
-        yBytes, // yBytes - evaluation result (32 bytes)
-        result.proof.ringProof, // proofBytes (48 bytes)
+    // Verify KZG proof with correct parameters:
+    // 1. commitmentBytes - the ring commitment
+    // 2. zBytes - evaluation point (domain generator)
+    // 3. yBytes - evaluation result y = p(z)
+    // 4. proofBytes - the ring proof
+    // 5. srsG1 - SRS G1 generator
+    // 6. srsG2 - SRS G2 generator
+    // 7. srsG2Tau - SRS G2 point τ*G2
+    const [ringValidError, ringValid] = verifyKzgProof(
+      result.proof.ringCommitment, // commitmentBytes (48 bytes)
+      zBytes, // zBytes - domain generator (32 bytes)
+      yBytes, // yBytes - evaluation result (32 bytes)
+      result.proof.ringProof, // proofBytes (48 bytes)
       this.srsG1, // srsG1 (48 bytes)
       this.srsG2, // srsG2 (96 bytes)
       this.srsG2Tau, // srsG2Tau (96 bytes)
+    )
+    if (ringValidError || !ringValid) {
+      throw new Error(
+        `Failed to verify ring commitment: ${ringValidError?.message ?? 'unknown error'}`,
       )
-      if (ringValidError || !ringValid) {
-        throw new Error(
-          `Failed to verify ring commitment: ${ringValidError?.message ?? 'unknown error'}`,
-        )
-      }
+    }
 
-      console.debug('Ring VRF verification result', {
-        ringValid,
-      })
+    console.debug('Ring VRF verification result', {
+      ringValid,
+    })
 
-      return ringValid
+    return ringValid
   }
 
   /**
@@ -726,7 +726,7 @@ export class RingVRFProver {
    *
    * Structure: gamma(32) || pedersen_proof(160) || ring_proof(592)
    * Total: 784 bytes
-   * 
+   *
    * NOTE: ring_commitment is NOT included in the ticket proof - it's part of the epoch root (144 bytes).
    * The verifier can compute the ring commitment from the epoch root during verification.
    */
@@ -735,9 +735,7 @@ export class RingVRFProver {
     const PEDERSEN_SIZE = 160 // 5 components × 32 bytes each
 
     const serialized = new Uint8Array(
-      GAMMA_SIZE +
-        PEDERSEN_SIZE +
-        result.proof.ringProof.length,
+      GAMMA_SIZE + PEDERSEN_SIZE + result.proof.ringProof.length,
     )
     let offset = 0
 
@@ -768,7 +766,7 @@ export class RingVRFProver {
    *
    * Structure: gamma(32) || pedersen_proof(160) || ring_proof(592)
    * Total: 784 bytes
-   * 
+   *
    * NOTE: ring_commitment is NOT included in the ticket proof - it's part of the epoch root (144 bytes).
    * The verifier must compute the ring commitment from the epoch root during verification.
    */
@@ -788,11 +786,13 @@ export class RingVRFProver {
     offset += PEDERSEN_SIZE
 
     // 3. Extract Ring commitment - 48 bytes
-    const ringCommitment = resultBytes.slice(offset, offset + RING_COMMITMENT_SIZE)
+    const ringCommitment = resultBytes.slice(
+      offset,
+      offset + RING_COMMITMENT_SIZE,
+    )
 
     // 3. Extract Ring proof - variable size (592 bytes for ring size 6)
     const ringProof = resultBytes.slice(offset)
-    
 
     // Log for debugging
     if (ringProof.length === 0) {

@@ -6,8 +6,11 @@
  */
 
 import { sha512 } from '@noble/hashes/sha2.js'
-import { BANDERSNATCH_PARAMS } from '@pbnjam/bandersnatch'
-import { mod, numberToBytesLittleEndian } from '@pbnjam/bandersnatch'
+import {
+  BANDERSNATCH_PARAMS,
+  mod,
+  numberToBytesLittleEndian,
+} from '@pbnjam/bandersnatch'
 import { bytesToBigIntLittleEndian } from './elligator2'
 
 /**

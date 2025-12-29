@@ -12,7 +12,6 @@ import { PedersenVRFProver } from '../prover/pedersen'
 import type { RingVRFInput } from '../prover/ring-kzg'
 import { PedersenVRFVerifier } from './pedersen'
 
-
 /**
  * Ring VRF Verifier using WASM bindings
  * Provides full Plonk zkSNARK proof verification matching Rust reference implementation
@@ -25,9 +24,7 @@ export class RingVRFVerifierWasm {
    *
    * @param srsFilePath - Path to SRS file (compressed format)
    */
-  constructor(
-    srsFilePath: string,
-  ) {
+  constructor(srsFilePath: string) {
     // Load SRS file (expects uncompressed arkworks format)
     // Replace '-compressed.bin' with '-uncompressed.bin' if needed
     this.srsBytes = readFileSync(srsFilePath)
@@ -35,7 +32,10 @@ export class RingVRFVerifierWasm {
 
   async init(): Promise<void> {
     // Load WASM module - pass the WASM file path directly to avoid import.meta.url issues in Bun
-    const wasmPath = new URL('../../wasm-ark-vrf/ark_vrf_wasm_bg.wasm', import.meta.url)
+    const wasmPath = new URL(
+      '../../wasm-ark-vrf/ark_vrf_wasm_bg.wasm',
+      import.meta.url,
+    )
     await initWasm(wasmPath.toString())
     this.wasmInitialized = true
   }
@@ -61,8 +61,10 @@ export class RingVRFVerifierWasm {
     auxData?: Uint8Array,
   ): boolean {
     if (!this.wasmInitialized) {
-      throw new Error('WASM module not initialized yet. Please wait for initialization to complete. ' +
-        'You can await wasmInitPromise from ring-wasm if needed.')
+      throw new Error(
+        'WASM module not initialized yet. Please wait for initialization to complete. ' +
+          'You can await wasmInitPromise from ring-wasm if needed.',
+      )
     }
 
     const pedersenValid = PedersenVRFVerifier.verify(
@@ -84,7 +86,9 @@ export class RingVRFVerifierWasm {
 
     // Step 3: Extract key commitment (Y_bar) from Pedersen proof
     // The ring proof verifies that the key commitment matches the ring
-    const pedersenProof = PedersenVRFProver.deserialize(result.proof.pedersenProof)
+    const pedersenProof = PedersenVRFProver.deserialize(
+      result.proof.pedersenProof,
+    )
     const keyCommitmentBytes = pedersenProof.Y_bar // Y_bar is the key commitment
 
     // Step 4: Verify ring proof using WASM (ark-vrf version)
@@ -93,13 +97,17 @@ export class RingVRFVerifierWasm {
     // NOT the full 784-byte structure (which includes gamma, pedersen_proof, ring_commitment).
     // The ring proof portion is extracted from the 784-byte structure by RingVRFProver.deserialize.
     const ringProofBytes = result.proof.ringProof
-    
+
     // Sanity check: ring proof should not be 784 bytes (that would be the full structure)
     if (ringProofBytes.length === 784) {
-      console.error('[RingVRFVerifierWasm] ERROR: ringProof is 784 bytes - this is the full structure, not just the ring proof portion!')
-      throw new Error('Invalid ring proof: received full 784-byte structure instead of just ring proof portion')
+      console.error(
+        '[RingVRFVerifierWasm] ERROR: ringProof is 784 bytes - this is the full structure, not just the ring proof portion!',
+      )
+      throw new Error(
+        'Invalid ring proof: received full 784-byte structure instead of just ring proof portion',
+      )
     }
-    
+
     try {
       const isValid = verify_ring_proof(
         this.srsBytes,
