@@ -19,6 +19,151 @@ bun install
 
 ## Usage
 
+### Command-Line Interface (CLI)
+
+The package provides a CLI for proving and verifying VRF proofs using JSON file inputs.
+
+#### Basic Usage
+
+```bash
+# Prove IETF VRF
+bandersnatch-vrf prove ietf --input input.json --output proof.json
+
+# Verify IETF VRF
+bandersnatch-vrf verify ietf --input verify.json
+
+# Prove Pedersen VRF
+bandersnatch-vrf prove pedersen --input input.json --output proof.json
+
+# Verify Pedersen VRF
+bandersnatch-vrf verify pedersen --input verify.json
+
+# Prove Ring VRF
+bandersnatch-vrf prove ring --input input.json --output proof.json
+
+# Verify Ring VRF
+bandersnatch-vrf verify ring --input verify.json
+```
+
+#### JSON Input Formats
+
+**IETF VRF Prove Input** (`input.json`):
+```json
+{
+  "secretKey": "0x...",
+  "input": "0x...",
+  "auxData": "0x..." // optional
+}
+```
+
+**IETF VRF Prove Output** (`proof.json`):
+```json
+{
+  "gamma": "0x...",
+  "proof": "0x..."
+}
+```
+
+**IETF VRF Verify Input** (`verify.json`):
+```json
+{
+  "publicKey": "0x...",
+  "input": "0x...",
+  "proof": "0x...",
+  "auxData": "0x..." // optional
+}
+```
+
+**Pedersen VRF Prove Input** (`input.json`):
+```json
+{
+  "secretKey": "0x...",
+  "input": "0x...",
+  "auxData": "0x..." // optional
+}
+```
+
+**Pedersen VRF Prove Output** (`proof.json`):
+```json
+{
+  "gamma": "0x...",
+  "proof": "0x..."
+}
+```
+
+**Pedersen VRF Verify Input** (`verify.json`):
+```json
+{
+  "input": "0x...",
+  "gamma": "0x...",
+  "proof": "0x...",
+  "auxData": "0x..." // optional
+}
+```
+
+**Ring VRF Prove Input** (`input.json`):
+```json
+{
+  "secretKey": "0x...",
+  "input": "0x...",
+  "auxData": "0x...", // optional
+  "ringKeys": ["0x...", "0x...", ...],
+  "proverIndex": 0,
+  "srsFilePath": "./test-data/srs/zcash-srs-2-11-compressed.bin",
+  "useWasm": false // optional, default: false
+}
+```
+
+**Ring VRF Prove Output** (`proof.json`):
+```json
+{
+  "gamma": "0x...",
+  "hash": "",
+  "proof": {
+    "pedersenProof": "0x...",
+    "ringCommitment": "0x...",
+    "ringProof": "0x...",
+    "proverIndex": 0
+  },
+  "serialized": "0x..."
+}
+```
+
+**Ring VRF Verify Input** (`verify.json`):
+```json
+{
+  "ringKeys": ["0x...", "0x...", ...],
+  "input": "0x...",
+  "serializedResult": "0x...",
+  "auxData": "0x...", // optional
+  "srsFilePath": "./test-data/srs/zcash-srs-2-11-compressed.bin",
+  "useWasm": false // optional, default: false
+}
+```
+
+#### Running the CLI
+
+The CLI can be run in several ways:
+
+1. **Using Bun directly**:
+```bash
+bun run packages/bandersnatch-vrf/src/cli.ts prove ietf --input input.json
+```
+
+2. **After building the binary**:
+```bash
+bun run build:bin
+./bin/bandersnatch-vrf prove ietf --input input.json
+```
+
+3. **Programmatically**:
+```ts
+import { proveIETF, verifyIETF } from '@pbnjam/bandersnatch-vrf'
+
+await proveIETF('input.json', 'proof.json')
+await verifyIETF('verify.json')
+```
+
 ### Import the public API
 
 ```ts
@@ -40,6 +185,15 @@ import {
   generateNonceRfc8032,
   generateChallengeRfc9381,
   pointToHashRfc9381,
+
+  // CLI functions
+  proveIETF,
+  verifyIETF,
+  provePedersen,
+  verifyPedersen,
+  proveRing,
+  verifyRing,
+  runCLI,
 } from '@pbnjam/bandersnatch-vrf'
 ```
 

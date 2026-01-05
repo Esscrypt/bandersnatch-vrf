@@ -1,0 +1,172 @@
+name: Build and Release Bandersnatch VRF Binary
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/bandersnatch-vrf/**'
+      - 'packages/bandersnatch-vrf/workflows/release.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            binary_name: bandersnatch-vrf-linux-x64
+            checksum_cmd: sha256sum
+          - os: macos-latest
+            platform: macos
+            binary_name: bandersnatch-vrf-macos-x64
+            checksum_cmd: shasum -a 256
+          - os: windows-latest
+            platform: win
+            binary_name: bandersnatch-vrf-win-x64.exe
+            checksum_cmd: certutil -hashfile
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.5
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-bandersnatch-vrf-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-bandersnatch-vrf-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build dependencies
+        run: bun run build
+        working-directory: packages/bandersnatch-vrf
+
+      - name: Build binary
+        run: bun run build:bin
+        working-directory: packages/bandersnatch-vrf
+
+      - name: Rename binary for Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd packages/bandersnatch-vrf/bin
+          if (Test-Path bandersnatch-vrf.exe) {
+            Move-Item -Force bandersnatch-vrf.exe ${{ matrix.binary_name }}
+          } else {
+            Move-Item -Force bandersnatch-vrf ${{ matrix.binary_name }}
+          }
+
+      - name: Rename binary for Unix
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd packages/bandersnatch-vrf/bin
+          mv bandersnatch-vrf ${{ matrix.binary_name }}
+          chmod +x ${{ matrix.binary_name }}
+
+      - name: Create checksum (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd packages/bandersnatch-vrf/bin
+          ${{ matrix.checksum_cmd }} ${{ matrix.binary_name }} > ${{ matrix.binary_name }}.sha256
+
+      - name: Create checksum (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd packages/bandersnatch-vrf/bin
+          certutil -hashfile ${{ matrix.binary_name }} SHA256 > ${{ matrix.binary_name }}.sha256
+          # Format checksum file to match Unix format (hash only, no filename)
+          powershell -Command "(Get-Content ${{ matrix.binary_name }}.sha256 | Select-Object -Skip 1) | Set-Content ${{ matrix.binary_name }}.sha256.tmp"
+          powershell -Command "Get-Content ${{ matrix.binary_name }}.sha256.tmp | ForEach-Object { $_.Trim() } | Set-Content ${{ matrix.binary_name }}.sha256"
+          Remove-Item ${{ matrix.binary_name }}.sha256.tmp
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary_name }}
+          path: |
+            packages/bandersnatch-vrf/bin/${{ matrix.binary_name }}
+            packages/bandersnatch-vrf/bin/${{ matrix.binary_name }}.sha256
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: bandersnatch-vrf-*
+          merge-multiple: false
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -name "bandersnatch-vrf-*" -type f ! -name "*.sha256" -exec cp {} release/ \;
+          find artifacts -name "*.sha256" -exec cp {} release/ \;
+
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: bandersnatch-vrf-${{ github.sha }}
+          name: Bandersnatch VRF Binary ${{ github.sha }}
+          body: |
+            Bandersnatch VRF CLI binary built from commit ${{ github.sha }}
+            
+            ## Usage
+            
+            ### Linux
+            ```bash
+            chmod +x bandersnatch-vrf-linux-x64
+            ./bandersnatch-vrf-linux-x64 prove ietf --input input.json --output proof.json
+            ```
+            
+            ### macOS
+            ```bash
+            chmod +x bandersnatch-vrf-macos-x64
+            ./bandersnatch-vrf-macos-x64 prove ietf --input input.json --output proof.json
+            ```
+            
+            ### Windows
+            ```powershell
+            .\bandersnatch-vrf-win-x64.exe prove ietf --input input.json --output proof.json
+            ```
+            
+            ## Verify Checksums
+            
+            ```bash
+            # Linux/macOS
+            sha256sum -c bandersnatch-vrf-*.sha256
+            
+            # Windows
+            certutil -hashfile bandersnatch-vrf-win-x64.exe SHA256
+            ```
+          draft: false
+          prerelease: true
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

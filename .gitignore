@@ -5,3 +5,7 @@ docs
 .npmrc
 
 .turbo
+
+proof.json
+proof-*.json
+bin/
