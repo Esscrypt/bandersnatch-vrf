@@ -1,7 +1,7 @@
 import type { RingVRFProverWasm } from '@pbnjam/bandersnatch-vrf'
 import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
-import { type Hex, hexToBytes, zeroHash } from 'viem'
+import { type Hex, hexToBytes } from 'viem'
 
 /**
  * Calculate Bandersnatch ring root from a set of public keys
@@ -107,9 +107,10 @@ export function extractRingKeysFromValidatorSet(
 
   // Convert validator public keys to Bandersnatch keys
   // Gray Paper: vk_vk_bs ∈ bskey ≡ vk[0:32] (first 32 bytes of validator key)
+  // NOTE: Do NOT filter out zero keys - they need to be kept so they can be replaced
+  // with the padding point during ring commitment computation (extractRingCoordinateVectors)
   const ringKeys = pendingSet
     .map((validator) => validator.bandersnatch)
-    .filter((key) => key !== zeroHash)
     .map((key) => hexToBytes(key))
 
   // Sort keys for deterministic ordering (Gray Paper requirement)

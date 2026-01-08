@@ -186,30 +186,3 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
 
   return safeResult({ g1Points, g1, g2Points, g2 })
 }
-
-/**
- * Convert monomial SRS to Lagrangian SRS
- *
- * This is a placeholder - actual conversion requires:
- * 1. Domain generator ω
- * 2. Computing Lagrange basis polynomials
- * 3. Evaluating at secret τ (which we don't have)
- *
- * For now, we return the monomial SRS as-is and note that
- * proper Lagrangian conversion requires the secret τ.
- *
- * @param monomialSRS - Monomial SRS points [G, τG, τ²G, ...]
- * @returns Lagrangian SRS points (for now, same as monomial)
- */
-export function convertToLagrangianSRS(
-  monomialSRS: Uint8Array[],
-): Safe<Uint8Array[]> {
-  // TODO: Implement proper Lagrangian conversion
-  // This requires the secret τ from the ceremony, which we don't have.
-  // For now, we assume the SRS file already contains Lagrangian points
-  // or we use a pre-computed conversion.
-  console.warn(
-    '[convertToLagrangianSRS] Using monomial SRS as Lagrangian (not correct for MSM)',
-  )
-  return safeResult(monomialSRS)
-}

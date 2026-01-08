@@ -13,6 +13,8 @@ import {
   mod,
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
+import { hexToBytes } from 'viem'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
@@ -68,6 +70,19 @@ export interface PedersenVRFResult {
  * Implements Pedersen VRF with blinding for anonymity
  */
 export class PedersenVRFProver {
+  /**
+   * Check if bytes are all zero, and if so, return padding point bytes
+   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
+   */
+  private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
+    // Check if all bytes are zero
+    const isAllZero = bytes.every((byte) => byte === 0)
+    if (isAllZero) {
+      // Return padding point bytes instead
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
+    return bytes
+  }
   /**
    * Generate blinding factor deterministically (matches arkworks implementation)
    */
@@ -150,13 +165,16 @@ export class PedersenVRFProver {
       const O_k = this.scalarMultiply(I, k)
 
       // Debug: Check if O_k is valid
-      const O_kPoint = BandersnatchCurve.bytesToPoint(O_k)
+      const O_kBytesChecked = this.usePaddingPointIfZero(O_k)
+      const IBytesChecked = this.usePaddingPointIfZero(I)
+      const O_kPoint = BandersnatchCurve.bytesToPoint(O_kBytesChecked)
+      const IPoint = BandersnatchCurve.bytesToPoint(IBytesChecked)
       console.debug('Generated O_k point', {
         O_kX: O_kPoint.x.toString(16),
         O_kY: O_kPoint.y.toString(16),
         k: bytesToBigIntLittleEndian(k).toString(16),
-        IX: BandersnatchCurve.bytesToPoint(I).x.toString(16),
-        IY: BandersnatchCurve.bytesToPoint(I).y.toString(16),
+        IX: IPoint.x.toString(16),
+        IY: IPoint.y.toString(16),
       })
 
       // Step 8 - Generate challenge c = H2(Y_bar, I, O, R, O_k, ad)
@@ -240,7 +258,9 @@ export class PedersenVRFProver {
     pointBytes: Uint8Array,
     scalarBytes: Uint8Array,
   ): Uint8Array {
-    const point = BandersnatchCurve.bytesToPoint(pointBytes)
+    // Check for all-zero bytes and use padding point if needed
+    const pointBytesChecked = this.usePaddingPointIfZero(pointBytes)
+    const point = BandersnatchCurve.bytesToPoint(pointBytesChecked)
     const scalar = mod(
       bytesToBigIntLittleEndian(scalarBytes),
       BandersnatchCurve.CURVE_ORDER,

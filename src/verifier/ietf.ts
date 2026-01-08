@@ -9,7 +9,8 @@ import {
   BandersnatchCurve,
   mod,
 } from '@pbnjam/bandersnatch'
-import { bytesToHex } from 'viem'
+import { bytesToHex, hexToBytes } from 'viem'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'
 import { IETFVRFProver } from '../prover/ietf'
@@ -19,6 +20,19 @@ import { IETFVRFProver } from '../prover/ietf'
  * Implements RFC-9381 VRF proof verification
  */
 export class IETFVRFVerifier {
+  /**
+   * Check if bytes are all zero, and if so, return padding point bytes
+   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
+   */
+  private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
+    // Check if all bytes are zero
+    const isAllZero = bytes.every((byte) => byte === 0)
+    if (isAllZero) {
+      // Return padding point bytes instead
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
+    return bytes
+  }
   /**
    * Verify VRF proof
    *
@@ -89,9 +103,13 @@ export class IETFVRFVerifier {
     const s = mod(sOriginal, BANDERSNATCH_PARAMS.CURVE_ORDER)
 
     // Convert inputs to curve points
-    const alphaPoint = BandersnatchCurve.bytesToPoint(alpha)
-    const gammaPoint = BandersnatchCurve.bytesToPoint(gammaFromProof) // Use gamma from proof
-    const publicKeyPoint = BandersnatchCurve.bytesToPoint(publicKey) // Y = public key point
+    // Check for all-zero bytes and use padding point if needed
+    const alphaBytes = this.usePaddingPointIfZero(alpha)
+    const gammaBytes = this.usePaddingPointIfZero(gammaFromProof)
+    const publicKeyBytes = this.usePaddingPointIfZero(publicKey)
+    const alphaPoint = BandersnatchCurve.bytesToPoint(alphaBytes)
+    const gammaPoint = BandersnatchCurve.bytesToPoint(gammaBytes) // Use gamma from proof
+    const publicKeyPoint = BandersnatchCurve.bytesToPoint(publicKeyBytes) // Y = public key point
 
     // Calculate u and v (reconstructed R points from proof)
     // Based on IETF VRF spec section 2.3 Verify:

@@ -143,6 +143,10 @@ export function verifyEntropyVRFSignature(
   signature: Uint8Array,
   sealOutput: Uint8Array,
 ): Safe<boolean> {
+  // #region agent log
+  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:141',message:'verifyEntropyVRFSignature entry',data:{validatorPublicKeyLength:validatorPublicKey.length,signatureLength:signature.length,sealOutputLength:sealOutput.length,validatorPublicKey:bytesToHex(validatorPublicKey),signatureFirst32:bytesToHex(signature.slice(0,32)),sealOutput:bytesToHex(sealOutput),isValidatorKeyZeros:validatorPublicKey.every(b=>b===0),isSignatureZeros:signature.every(b=>b===0),isSealOutputZeros:sealOutput.every(b=>b===0)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
   // Validate inputs
   if (validatorPublicKey.length !== 32) {
     return safeError(new Error('Validator public key must be 32 bytes'))
@@ -164,18 +168,39 @@ export function verifyEntropyVRFSignature(
   offset += XENTROPY.length
   context.set(sealOutput, offset)
 
+  // #region agent log
+  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:165',message:'Context built, calling verify',data:{contextLength:context.length,contextHex:bytesToHex(context),xentropyLength:XENTROPY.length},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+
   // Verify IETF VRF signature using IETFVRFVerifier
   // Gray Paper equation 158: bssignature{k}{c}{m} where:
   // k = validatorPublicKey, c = context, m = [] (empty message)
   // NOTE: When m = [] (empty), the context c becomes the input (hashed to curve point)
   // This matches the pattern used in audit signatures (bssignature{k}{c}{[]})
   // IETFVRFVerifier.verify parameter order is (publicKey, input, proof, auxData)
-  const isValid = IETFVRFVerifier.verify(
-    validatorPublicKey,
-    context, // Xentropy ∥ banderout{H_sealsig} (context) - becomes input when m = []
-    signature,
-    new Uint8Array(0), // [] (empty auxData)
-  )
+  let isValid: boolean
+  try {
+    isValid = IETFVRFVerifier.verify(
+      validatorPublicKey,
+      context, // Xentropy ∥ banderout{H_sealsig} (context) - becomes input when m = []
+      signature,
+      new Uint8Array(0), // [] (empty auxData)
+    )
+  } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:173',message:'verify threw exception',data:{error:error instanceof Error ? error.message : String(error),stack:error instanceof Error ? error.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+
+    console.error('Entropy VRF signature verification failed', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      publicKeyHex: bytesToHex(validatorPublicKey),
+      contextHex: bytesToHex(context),
+      signatureHex: bytesToHex(signature),
+    })
+    
+    return safeError(new Error('verifyEntropyVRFSignature error'))
+  }
 
   if (!isValid) {
     console.error('Entropy VRF signature verification failed', {

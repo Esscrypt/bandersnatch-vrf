@@ -9,7 +9,8 @@ import {
   mod,
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
-import { bytesToHex } from 'viem'
+import { bytesToHex, hexToBytes } from 'viem'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
@@ -33,6 +34,19 @@ export interface IETFVRFResult {
  * Implements RFC-9381 VRF proof generation
  */
 export class IETFVRFProver {
+  /**
+   * Check if bytes are all zero, and if so, return padding point bytes
+   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
+   */
+  private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
+    // Check if all bytes are zero
+    const isAllZero = bytes.every((byte) => byte === 0)
+    if (isAllZero) {
+      // Return padding point bytes instead
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
+    return bytes
+  }
   /**
    * Generate VRF proof and output
    */
@@ -88,7 +102,9 @@ export class IETFVRFProver {
     pointUint8Array: Uint8Array,
     scalarUint8Array: Uint8Array,
   ): Uint8Array {
-    const point = BandersnatchCurve.bytesToPoint(pointUint8Array)
+    // Check for all-zero bytes and use padding point if needed
+    const pointBytes = this.usePaddingPointIfZero(pointUint8Array)
+    const point = BandersnatchCurve.bytesToPoint(pointBytes)
     const scalar = mod(
       bytesToBigIntLittleEndian(scalarUint8Array),
       BandersnatchCurve.CURVE_ORDER,
@@ -113,8 +129,11 @@ export class IETFVRFProver {
     // s = k + c * x (mod q)
 
     // Convert alpha and gamma to curve points
-    const alphaPoint = BandersnatchCurve.bytesToPoint(alpha)
-    const gammaPoint = BandersnatchCurve.bytesToPoint(gamma)
+    // Check for all-zero bytes and use padding point if needed
+    const alphaBytesChecked = this.usePaddingPointIfZero(alpha)
+    const gammaBytesChecked = this.usePaddingPointIfZero(gamma)
+    const alphaPoint = BandersnatchCurve.bytesToPoint(alphaBytesChecked)
+    const gammaPoint = BandersnatchCurve.bytesToPoint(gammaBytesChecked)
 
     // Generate nonce k using RFC-8032
     const kBytes = generateNonceRfc8032(secretKey, alpha)
