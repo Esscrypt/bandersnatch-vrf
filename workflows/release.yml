@@ -50,7 +50,7 @@ jobs:
             ${{ runner.os }}-turbo-bandersnatch-vrf-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Build dependencies
         run: bun run build

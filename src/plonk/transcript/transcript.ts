@@ -6,6 +6,8 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { createHash } from 'node:crypto'
 import type { ColumnsCommited, ColumnsEvaluated } from '../piop/mod'
 
 /**
@@ -111,8 +113,7 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
     // Synchronous SHA-256 (for Node.js)
     // In production, use async crypto.subtle.digest
     try {
-      const crypto = require('crypto')
-      return new Uint8Array(crypto.createHash('sha256').update(data).digest())
+      return new Uint8Array(createHash('sha256').update(data).digest())
     } catch {
       // Fallback: use Web Crypto API if available
       // For now, use a simple hash (not cryptographically secure in this fallback)
@@ -122,7 +123,6 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
 
   private fallbackHash(data: Uint8Array): Uint8Array {
     // Fallback hash using SHA-256 from @noble/hashes
-    const { sha256 } = require('@noble/hashes/sha256')
     return sha256(data)
   }
 
