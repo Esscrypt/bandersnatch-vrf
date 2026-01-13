@@ -1,6 +1,6 @@
 /**
  * PIOP Verifier
- * 
+ *
  * Implements the verifier side of Polynomial Interactive Oracle Proofs (PIOP)
  * Matches w3f-ring-proof/src/piop/verifier.rs
  */
@@ -10,8 +10,11 @@ import { BooleanityValues } from '../gadgets/booleanity'
 import { CondAddValues } from '../gadgets/cond-add'
 import { FixedCellsValues } from '../gadgets/fixed-cells'
 import { InnerProdValues } from '../gadgets/inner-prod'
-import type { FixedColumnsCommitted } from './mod'
-import { RingCommitments, RingEvaluations } from './mod'
+import type {
+  FixedColumnsCommitted,
+  RingCommitments,
+  RingEvaluations,
+} from './mod'
 
 /**
  * Evaluated domain for verifier
@@ -26,7 +29,7 @@ export interface EvaluatedDomain {
 
 /**
  * PIOP Verifier
- * 
+ *
  * Verifies PIOP proofs by checking constraints
  */
 export class PiopVerifier {
@@ -45,7 +48,7 @@ export class PiopVerifier {
 
   /**
    * Initialize PIOP verifier
-   * 
+   *
    * @param domainEvals - Evaluated domain values
    * @param fixedColumnsCommitted - Committed fixed columns
    * @param witnessColumnsCommitted - Committed witness columns
@@ -163,7 +166,7 @@ export class PiopVerifier {
 
   /**
    * Compute linearized polynomial commitment
-   * 
+   *
    * Combines witness column commitments with aggregated coefficients
    */
   linPolyCommitment(aggCoeffs: bigint[]): Uint8Array {
@@ -201,11 +204,7 @@ export class PiopVerifier {
 
     // Combine commitments: Σ(coeff_i * commitment_i)
     // Matching Rust: C::combine(&[coeffs], &[commitments])
-    const commitments: Uint8Array[] = [
-      innerProdAcc,
-      condAddAccX,
-      condAddAccY,
-    ]
+    const commitments: Uint8Array[] = [innerProdAcc, condAddAccX, condAddAccY]
     const commitmentCoeffs: bigint[] = [
       innerProdCoeff,
       condAddXCoeff,
@@ -226,7 +225,7 @@ export class PiopVerifier {
 
   /**
    * Evaluate quotient polynomial at zeta
-   * 
+   *
    * Computes: q(zeta) = (eval + lin_at_zeta_omega) / vanishing_poly(zeta)
    */
   evaluateQAtZeta(aggCoeffs: bigint[], linAtZetaOmega: bigint): bigint {
@@ -258,4 +257,3 @@ export class PiopVerifier {
     return this.domainEvals
   }
 }
-

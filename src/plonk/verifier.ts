@@ -1,14 +1,14 @@
 /**
  * Plonk Verifier
- * 
+ *
  * Main Plonk verifier that verifies Plonk proofs
  * Matches w3f-plonk-common/src/verifier.rs
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { verifyKzgProof, bigintToBytes32BE } from '../utils/kzg-manual'
-import type { PiopVerifier } from './piop/verifier'
+import { bigintToBytes32BE, verifyKzgProof } from '../utils/kzg-manual'
 import type { RingCommitments, RingEvaluations } from './piop/mod'
+import type { PiopVerifier } from './piop/verifier'
 import type { Proof } from './proof'
 import type { PlonkTranscript } from './transcript/transcript'
 
@@ -23,7 +23,7 @@ export interface Challenges {
 
 /**
  * Plonk Verifier
- * 
+ *
  * Verifies Plonk proofs by:
  * - Restoring challenges from transcript
  * - Verifying constraint evaluations
@@ -39,7 +39,7 @@ export class PlonkVerifier {
 
   /**
    * Initialize Plonk verifier
-   * 
+   *
    * @param pcsVk - Polynomial commitment scheme verifier key (SRS)
    * @param verifierKey - Verifier key (for transcript)
    * @param emptyTranscript - Empty transcript instance
@@ -74,7 +74,7 @@ export class PlonkVerifier {
 
   /**
    * Verify Plonk proof
-   * 
+   *
    * @param piop - PIOP verifier instance
    * @param proof - Plonk proof
    * @param challenges - Challenges (alphas, zeta, nus)
@@ -91,7 +91,11 @@ export class PlonkVerifier {
     // Combine all column commitments
     const precommittedCols = piop.precommittedColumns()
     const witnessCols = proof.columnCommitments.toVec()
-    const columns = [...precommittedCols, ...witnessCols, proof.quotientCommitment]
+    const columns = [
+      ...precommittedCols,
+      ...witnessCols,
+      proof.quotientCommitment,
+    ]
 
     // Combine all column evaluations at zeta
     const witnessEvals = proof.columnsAtZeta.toVec()
@@ -157,7 +161,7 @@ export class PlonkVerifier {
 
   /**
    * Restore challenges from transcript
-   * 
+   *
    * @param instance - Instance (public input)
    * @param proof - Plonk proof
    * @param nPolys - Number of polynomials
@@ -193,7 +197,7 @@ export class PlonkVerifier {
 
   /**
    * Combine commitments with coefficients
-   * 
+   *
    * Computes: Σ(nu_i * C_i) using MSM
    */
   private combineCommitments(
@@ -218,4 +222,3 @@ export class PlonkVerifier {
     return result.toBytes(true)
   }
 }
-

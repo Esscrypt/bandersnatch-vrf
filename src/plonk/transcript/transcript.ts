@@ -1,18 +1,18 @@
 /**
  * Plonk Transcript (Fiat-Shamir)
- * 
+ *
  * Implements Fiat-Shamir transform for Plonk protocol
  * Matches w3f-plonk-common/src/transcript.rs
  */
 
+import { createHash } from 'node:crypto'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { sha256 } from '@noble/hashes/sha2.js'
-import { createHash } from 'node:crypto'
 import type { ColumnsCommited, ColumnsEvaluated } from '../piop/mod'
 
 /**
  * Plonk Transcript Trait
- * 
+ *
  * Generates challenges using Fiat-Shamir transform
  */
 export interface PlonkTranscript<C> {
@@ -69,7 +69,7 @@ export interface PlonkTranscript<C> {
 
 /**
  * Simple Transcript Implementation
- * 
+ *
  * Uses SHA-256 for Fiat-Shamir challenges
  * Implements SHA-256-based Fiat-Shamir transcript matching Rust implementation
  */
@@ -215,4 +215,3 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
       .map(() => this.challenge(label))
   }
 }
-

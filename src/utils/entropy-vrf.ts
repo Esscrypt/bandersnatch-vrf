@@ -144,7 +144,29 @@ export function verifyEntropyVRFSignature(
   sealOutput: Uint8Array,
 ): Safe<boolean> {
   // #region agent log
-  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:141',message:'verifyEntropyVRFSignature entry',data:{validatorPublicKeyLength:validatorPublicKey.length,signatureLength:signature.length,sealOutputLength:sealOutput.length,validatorPublicKey:bytesToHex(validatorPublicKey),signatureFirst32:bytesToHex(signature.slice(0,32)),sealOutput:bytesToHex(sealOutput),isValidatorKeyZeros:validatorPublicKey.every(b=>b===0),isSignatureZeros:signature.every(b=>b===0),isSealOutputZeros:sealOutput.every(b=>b===0)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
+  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'entropy-vrf.ts:141',
+      message: 'verifyEntropyVRFSignature entry',
+      data: {
+        validatorPublicKeyLength: validatorPublicKey.length,
+        signatureLength: signature.length,
+        sealOutputLength: sealOutput.length,
+        validatorPublicKey: bytesToHex(validatorPublicKey),
+        signatureFirst32: bytesToHex(signature.slice(0, 32)),
+        sealOutput: bytesToHex(sealOutput),
+        isValidatorKeyZeros: validatorPublicKey.every((b) => b === 0),
+        isSignatureZeros: signature.every((b) => b === 0),
+        isSealOutputZeros: sealOutput.every((b) => b === 0),
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'A',
+    }),
+  }).catch(() => {})
   // #endregion
 
   // Validate inputs
@@ -169,7 +191,23 @@ export function verifyEntropyVRFSignature(
   context.set(sealOutput, offset)
 
   // #region agent log
-  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:165',message:'Context built, calling verify',data:{contextLength:context.length,contextHex:bytesToHex(context),xentropyLength:XENTROPY.length},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+  fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'entropy-vrf.ts:165',
+      message: 'Context built, calling verify',
+      data: {
+        contextLength: context.length,
+        contextHex: bytesToHex(context),
+        xentropyLength: XENTROPY.length,
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'pre-fix',
+      hypothesisId: 'C',
+    }),
+  }).catch(() => {})
   // #endregion
 
   // Verify IETF VRF signature using IETFVRFVerifier
@@ -188,7 +226,25 @@ export function verifyEntropyVRFSignature(
     )
   } catch (error) {
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'entropy-vrf.ts:173',message:'verify threw exception',data:{error:error instanceof Error ? error.message : String(error),stack:error instanceof Error ? error.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'entropy-vrf.ts:173',
+          message: 'verify threw exception',
+          data: {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'pre-fix',
+          hypothesisId: 'B',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
 
     console.error('Entropy VRF signature verification failed', {
@@ -198,7 +254,7 @@ export function verifyEntropyVRFSignature(
       contextHex: bytesToHex(context),
       signatureHex: bytesToHex(signature),
     })
-    
+
     return safeError(new Error('verifyEntropyVRFSignature error'))
   }
 

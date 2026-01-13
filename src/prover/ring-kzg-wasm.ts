@@ -22,29 +22,40 @@ import type { RingVRFInput, RingVRFResult } from './ring-kzg'
  */
 function findWasmFile(): string {
   const wasmFileName = 'ark_vrf_wasm_bg.wasm'
-  
+
   // Strategy 1: Check environment variable
   const envPath = process.env['BANDERSNATCH_VRF_WASM_PATH']
   if (envPath && existsSync(envPath)) {
     return envPath
   }
-  
+
   // Strategy 2: Try relative to current file location (development)
   const currentDir =
     typeof __dirname !== 'undefined'
       ? __dirname
       : dirname(fileURLToPath(import.meta.url))
-  const relativePath = join(currentDir, '..', '..', 'wasm-ark-vrf', wasmFileName)
+  const relativePath = join(
+    currentDir,
+    '..',
+    '..',
+    'wasm-ark-vrf',
+    wasmFileName,
+  )
   if (existsSync(relativePath)) {
     return relativePath
   }
-  
+
   // Strategy 3: Try to find workspace root and search from there
   // Walk up from current directory to find workspace root (has packages/ directory)
   let searchDir = currentDir
   for (let i = 0; i < 10; i++) {
     const packagesDir = join(searchDir, 'packages')
-    const wasmPath = join(packagesDir, 'bandersnatch-vrf', 'wasm-ark-vrf', wasmFileName)
+    const wasmPath = join(
+      packagesDir,
+      'bandersnatch-vrf',
+      'wasm-ark-vrf',
+      wasmFileName,
+    )
     if (existsSync(wasmPath)) {
       return wasmPath
     }
@@ -52,23 +63,35 @@ function findWasmFile(): string {
     if (parent === searchDir) break // Reached filesystem root
     searchDir = parent
   }
-  
+
   // Strategy 4: Try from process.cwd() (current working directory)
   const cwd = process.cwd()
-  const cwdPackagesPath = join(cwd, 'packages', 'bandersnatch-vrf', 'wasm-ark-vrf', wasmFileName)
+  const cwdPackagesPath = join(
+    cwd,
+    'packages',
+    'bandersnatch-vrf',
+    'wasm-ark-vrf',
+    wasmFileName,
+  )
   if (existsSync(cwdPackagesPath)) {
     return cwdPackagesPath
   }
-  
+
   // Strategy 5: Try relative to process.cwd() if it's in the workspace
   if (cwd.includes('packages')) {
     const workspaceRoot = cwd.split('/packages')[0]
-    const workspacePath = join(workspaceRoot, 'packages', 'bandersnatch-vrf', 'wasm-ark-vrf', wasmFileName)
+    const workspacePath = join(
+      workspaceRoot,
+      'packages',
+      'bandersnatch-vrf',
+      'wasm-ark-vrf',
+      wasmFileName,
+    )
     if (existsSync(workspacePath)) {
       return workspacePath
     }
   }
-  
+
   // If none found, return the relative path (will throw a clear error)
   return relativePath
 }
@@ -96,14 +119,14 @@ export class RingVRFProverWasm {
   async init(): Promise<void> {
     // Load WASM module - find file dynamically to work in both development and compiled binaries
     const wasmPath = findWasmFile()
-    
+
     // Read WASM file as bytes and pass directly to avoid fetch() issues
     const wasmBytes = readFileSync(wasmPath)
     const wasmArrayBuffer = wasmBytes.buffer.slice(
       wasmBytes.byteOffset,
       wasmBytes.byteOffset + wasmBytes.byteLength,
     )
-    
+
     await initWasm(wasmArrayBuffer)
     this.wasmInitialized = true
   }

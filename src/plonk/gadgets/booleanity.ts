@@ -1,6 +1,6 @@
 /**
  * Booleanity Gadget
- * 
+ *
  * Ensures that a column contains only boolean values (0 or 1)
  * Constraint: b * (1 - b) = 0
  */
@@ -10,7 +10,7 @@ import type { BitColumn } from './bit-column'
 
 /**
  * Booleanity Gadget
- * 
+ *
  * Constrains a bit column to contain only 0 or 1 values
  */
 export class Booleanity {
@@ -32,11 +32,11 @@ export class Booleanity {
   constraints(): bigint[][] {
     const Fr = bls12_381.fields.Fr
     const domain4xSize = this.bits.col.evals4x.length
-    
+
     // Get evaluations over 4x domain
     const b = this.bits.col.evals4x
     const one = Fr.ONE
-    
+
     // Compute constraint: (1 - b) * b
     const constraint: bigint[] = []
     for (let i = 0; i < domain4xSize; i++) {
@@ -45,7 +45,7 @@ export class Booleanity {
       const result = Fr.mul(oneMinusB, bF)
       constraint.push(result)
     }
-    
+
     return [constraint]
   }
 
@@ -82,4 +82,3 @@ export class BooleanityValues {
     return [constraint]
   }
 }
-

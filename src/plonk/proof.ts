@@ -1,12 +1,12 @@
 /**
  * Plonk Proof Structure
- * 
+ *
  * Matches w3f-plonk-common/src/lib.rs Proof type
  */
 
 /**
  * Plonk Proof
- * 
+ *
  * Contains all commitments and evaluations needed for verification
  */
 export interface Proof<Commitments, Evaluations> {
@@ -23,4 +23,3 @@ export interface Proof<Commitments, Evaluations> {
   /** Linearization KZG proof at zeta*omega */
   linAtZetaOmegaProof: Uint8Array
 }
-

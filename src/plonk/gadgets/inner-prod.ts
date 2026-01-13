@@ -1,6 +1,6 @@
 /**
  * Inner Product Gadget
- * 
+ *
  * Computes the inner product of two columns: acc[i] = sum(a[j] * b[j] for j <= i)
  */
 
@@ -10,7 +10,7 @@ import { FieldColumn } from '../domain/domain'
 
 /**
  * Inner Product Gadget
- * 
+ *
  * Computes cumulative inner product: acc[i] = sum(a[0..i] * b[0..i])
  */
 export class InnerProd {
@@ -22,7 +22,7 @@ export class InnerProd {
 
   /**
    * Initialize InnerProd gadget
-   * 
+   *
    * @param a - First column
    * @param b - Second column
    * @param domain - Plonk domain
@@ -96,14 +96,14 @@ export class InnerProd {
   constraints(): bigint[][] {
     const Fr = bls12_381.fields.Fr
     const domain4xSize = this.domain.getDomain4x().size
-    
+
     // Get evaluations over 4x domain
     const a = this.a.evals4x
     const b = this.b.evals4x
     const acc = this.acc.evals4x
     const accShifted = this.acc.shifted4x()
     const notLast = this.notLast.evals4x
-    
+
     // Compute constraint: (acc_shifted - acc) - (a * b)) * not_last
     const constraint: bigint[] = []
     for (let i = 0; i < domain4xSize; i++) {
@@ -112,17 +112,17 @@ export class InnerProd {
       const aF = Fr.create(a[i]!)
       const bF = Fr.create(b[i]!)
       const notLastF = Fr.create(notLast[i]!)
-      
+
       // (acc_shifted - acc) - (a * b)
       const diff = Fr.sub(accShiftedF, accF)
       const product = Fr.mul(aF, bF)
       const constraintValue = Fr.sub(diff, product)
-      
+
       // Multiply by not_last
       const result = Fr.mul(constraintValue, notLastF)
       constraint.push(result)
     }
-    
+
     return [constraint]
   }
 
@@ -173,4 +173,3 @@ export class InnerProdValues {
     return [result]
   }
 }
-

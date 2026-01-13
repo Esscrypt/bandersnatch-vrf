@@ -1,6 +1,6 @@
 /**
  * Affine Column for Plonk
- * 
+ *
  * Represents a column of affine curve points in evaluation form
  */
 
@@ -32,9 +32,9 @@ export class AffineColumn {
     points: Array<{ x: bigint; y: bigint }>,
     domain: Domain,
   ): AffineColumn {
-    const xs = points.map(p => p.x)
-    const ys = points.map(p => p.y)
-    
+    const xs = points.map((p) => p.x)
+    const ys = points.map((p) => p.y)
+
     // Pad to domain size if needed
     while (xs.length < domain.size) {
       xs.push(0n)
@@ -64,4 +64,3 @@ export class AffineColumn {
     return [this.xs.evaluate(z), this.ys.evaluate(z)]
   }
 }
-

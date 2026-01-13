@@ -1,6 +1,6 @@
 /**
  * Plonk Prover
- * 
+ *
  * Main Plonk prover that wraps PIOP and implements the 3-round Plonk protocol
  * Matches w3f-plonk-common/src/prover.rs
  */
@@ -9,7 +9,12 @@ import * as fft from '@noble/curves/abstract/fft.js'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { curvePointToNoble } from '../crypto/elligator2'
-import { bigintToBytes32BE, blobToKzgCommitment, computeBlobKzgProof, polynomialToBlob } from '../utils/kzg-manual'
+import {
+  bigintToBytes32BE,
+  blobToKzgCommitment,
+  computeBlobKzgProof,
+  polynomialToBlob,
+} from '../utils/kzg-manual'
 import type { DensePolynomial } from './domain/polynomial'
 import { DensePolynomialImpl } from './domain/polynomial'
 import type { RingCommitments, RingEvaluations } from './piop/mod'
@@ -19,7 +24,7 @@ import type { PlonkTranscript } from './transcript/transcript'
 
 /**
  * Plonk Prover
- * 
+ *
  * Implements the 3-round Plonk protocol:
  * - Round 1: Commit to witness columns
  * - Round 2: Aggregate constraints, compute quotient polynomial
@@ -36,7 +41,7 @@ export class PlonkProver {
 
   /**
    * Initialize Plonk prover
-   * 
+   *
    * @param pcsCk - Polynomial commitment scheme committing key (SRS)
    * @param verifierKey - Verifier key (for transcript)
    * @param emptyTranscript - Empty transcript instance
@@ -74,7 +79,7 @@ export class PlonkProver {
 
   /**
    * Generate Plonk proof
-   * 
+   *
    * @param piop - PIOP prover instance
    * @returns Plonk proof
    */
@@ -95,7 +100,10 @@ export class PlonkProver {
     const columnCommitments = piop.committedColumns((poly) => {
       // Commit polynomial using KZG
       const blob = polynomialToBlob(poly.coeffs)
-      const [error, commitment] = blobToKzgCommitment(blob, this.pcsCk.srsG1Points)
+      const [error, commitment] = blobToKzgCommitment(
+        blob,
+        this.pcsCk.srsG1Points,
+      )
       if (error || !commitment) {
         throw new Error(
           `Failed to commit polynomial: ${error?.message ?? 'unknown error'}`,
@@ -140,7 +148,26 @@ export class PlonkProver {
     const constraintPolysLinearized = piop.constraintsLinearized(zeta)
 
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'prover.ts:140',message:'Before aggregatePolynomials',data:{constraintPolysLinearizedLength:constraintPolysLinearized.length,alphasLength:alphas.length,nConstraints},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'prover.ts:140',
+          message: 'Before aggregatePolynomials',
+          data: {
+            constraintPolysLinearizedLength: constraintPolysLinearized.length,
+            alphasLength: alphas.length,
+            nConstraints,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
 
     // Aggregate linearized constraint polynomials
@@ -199,7 +226,7 @@ export class PlonkProver {
 
   /**
    * Aggregate evaluations with coefficients
-   * 
+   *
    * Computes: Σ(alpha_i * evaluations_i)
    * Matching Rust: aggregate_evaluations() which returns Evaluations<F> with interpolate() method
    */
@@ -245,9 +272,11 @@ export class PlonkProver {
         // We need to find the domain size and apply IFFT
         const domainSize = n
         const logNValue = Math.log2(domainSize)
-        
+
         if (logNValue % 1 !== 0) {
-          throw new Error(`Domain size ${domainSize} must be power of 2 for IFFT`)
+          throw new Error(
+            `Domain size ${domainSize} must be power of 2 for IFFT`,
+          )
         }
 
         // Apply IFFT to get polynomial coefficients
@@ -259,23 +288,23 @@ export class PlonkProver {
 
   /**
    * IFFT on field elements
-   * 
+   *
    * Converts from evaluation form to coefficient form
    */
   private ifft(values: bigint[], domainSize: number, logN: number): bigint[] {
     const Fr = bls12_381.fields.Fr
-    
+
     if (logN % 1 !== 0) {
       throw new Error(`IFFT requires power of 2, got ${domainSize}`)
     }
-    
+
     // Get roots of unity for the domain
     const roots = fft.rootsOfUnity(Fr, BigInt(domainSize))
     const omega = roots.omega(logN)
     const omegaInv = Fr.inv(omega)
-    
+
     const result = values.map((v) => Fr.create(v))
-    
+
     // Bit-reverse permutation
     for (let i = 0; i < domainSize; i++) {
       const j = this.bitReverse(i, logN)
@@ -285,7 +314,7 @@ export class PlonkProver {
         result[j] = temp!
       }
     }
-    
+
     // Cooley-Tukey IFFT
     let m = 1
     for (let s = 1; s <= logN; s++) {
@@ -304,7 +333,7 @@ export class PlonkProver {
       }
       m *= 2
     }
-    
+
     // Normalize by dividing by domain size
     const domainSizeInv = Fr.inv(Fr.create(BigInt(domainSize)))
     return result.map((r) => Fr.mul(r, domainSizeInv))
@@ -324,7 +353,7 @@ export class PlonkProver {
 
   /**
    * Aggregate polynomials with coefficients
-   * 
+   *
    * Computes: Σ(nu_i * poly_i)
    */
   private aggregatePolynomials(
@@ -358,4 +387,3 @@ export class PlonkProver {
     return new DensePolynomialImpl(aggregated)
   }
 }
-

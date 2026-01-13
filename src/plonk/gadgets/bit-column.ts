@@ -1,6 +1,6 @@
 /**
  * Bit Column for Plonk
- * 
+ *
  * Represents a column of boolean values (bits) in evaluation form
  */
 
@@ -24,8 +24,8 @@ export class BitColumn {
    */
   static init(bits: boolean[], domain: Domain): BitColumn {
     // Convert bits to field elements (0 or 1)
-    const evals = bits.map(b => (b ? 1n : 0n))
-    
+    const evals = bits.map((b) => (b ? 1n : 0n))
+
     // Pad to domain size if needed
     while (evals.length < domain.size) {
       evals.push(0n)
@@ -45,4 +45,3 @@ export class BitColumn {
     return this.col.evaluate(z)
   }
 }
-

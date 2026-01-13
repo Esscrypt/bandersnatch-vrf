@@ -1,6 +1,6 @@
 /**
  * PIOP Prover
- * 
+ *
  * Implements the prover side of Polynomial Interactive Oracle Proofs (PIOP)
  * Matches w3f-ring-proof/src/piop/prover.rs
  */
@@ -19,7 +19,7 @@ import type { FixedColumns, PiopParams } from './params'
 
 /**
  * PIOP Prover
- * 
+ *
  * Builds the execution trace and constraints for ring proof
  */
 export class PiopProver {
@@ -36,7 +36,7 @@ export class PiopProver {
 
   /**
    * Build PIOP prover
-   * 
+   *
    * @param params - PIOP parameters
    * @param fixedColumns - Fixed columns (points and ring selector)
    * @param proverIndexInKeys - Prover's index in the ring
@@ -102,7 +102,7 @@ export class PiopProver {
 
   /**
    * Build bits column
-   * 
+   *
    * Structure: [keyset_part (one hot), scalar_part (secret bits)]
    * - keyset_part: all false except at prover_index
    * - scalar_part: bits of secret scalar
@@ -183,7 +183,13 @@ export class PiopProver {
       this.condAdd.acc.ys.evaluate(zeta),
     ]
 
-    return new RingEvaluations(points, ringSelector, bits, innProdAcc, condAddAcc)
+    return new RingEvaluations(
+      points,
+      ringSelector,
+      bits,
+      innProdAcc,
+      condAddAcc,
+    )
   }
 
   /**
@@ -207,64 +213,187 @@ export class PiopProver {
    */
   constraintsLinearized(zeta: bigint): DensePolynomial[] {
     const result: DensePolynomial[] = []
-    
+
     // InnerProd returns array of bigint (coefficients)
     const innerProdCoeffs = this.innerProd.constraintsLinearized(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:212',message:'InnerProd constraintsLinearized',data:{innerProdCoeffsLength:innerProdCoeffs.length,innerProdCoeffs:innerProdCoeffs.map(c=>c.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:212',
+          message: 'InnerProd constraintsLinearized',
+          data: {
+            innerProdCoeffsLength: innerProdCoeffs.length,
+            innerProdCoeffs: innerProdCoeffs.map((c) => c.toString()),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const coeff of innerProdCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
-    
+
     // CondAdd returns DensePolynomial[] directly (special case)
     // Matching Rust: constraints_linearized() returns Vec<DensePolynomial<F>>
     const condAddPolys = this.condAdd.constraintsLinearizedPolynomials(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:220',message:'CondAdd constraintsLinearized',data:{condAddPolysLength:condAddPolys.length,condAddPolysDegrees:condAddPolys.map(p=>p.degree)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:220',
+          message: 'CondAdd constraintsLinearized',
+          data: {
+            condAddPolysLength: condAddPolys.length,
+            condAddPolysDegrees: condAddPolys.map((p) => p.degree),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const poly of condAddPolys) {
       result.push(poly)
     }
-    
+
     // Booleanity returns array of bigint (coefficients)
     const booleanityCoeffs = this.booleanity.constraintsLinearized(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:228',message:'Booleanity constraintsLinearized',data:{booleanityCoeffsLength:booleanityCoeffs.length,booleanityCoeffs:booleanityCoeffs.map(c=>c.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:228',
+          message: 'Booleanity constraintsLinearized',
+          data: {
+            booleanityCoeffsLength: booleanityCoeffs.length,
+            booleanityCoeffs: booleanityCoeffs.map((c) => c.toString()),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const coeff of booleanityCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
-    
+
     // FixedCells return arrays of bigint (coefficients)
     const condAddAccXCoeffs = this.condAddAccX.constraintsLinearized(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:236',message:'CondAddAccX constraintsLinearized',data:{condAddAccXCoeffsLength:condAddAccXCoeffs.length,condAddAccXCoeffs:condAddAccXCoeffs.map(c=>c.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:236',
+          message: 'CondAddAccX constraintsLinearized',
+          data: {
+            condAddAccXCoeffsLength: condAddAccXCoeffs.length,
+            condAddAccXCoeffs: condAddAccXCoeffs.map((c) => c.toString()),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'D',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const coeff of condAddAccXCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
-    
+
     const condAddAccYCoeffs = this.condAddAccY.constraintsLinearized(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:244',message:'CondAddAccY constraintsLinearized',data:{condAddAccYCoeffsLength:condAddAccYCoeffs.length,condAddAccYCoeffs:condAddAccYCoeffs.map(c=>c.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:244',
+          message: 'CondAddAccY constraintsLinearized',
+          data: {
+            condAddAccYCoeffsLength: condAddAccYCoeffs.length,
+            condAddAccYCoeffs: condAddAccYCoeffs.map((c) => c.toString()),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const coeff of condAddAccYCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
-    
+
     const innerProdAccCoeffs = this.innerProdAcc.constraintsLinearized(zeta)
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:252',message:'InnerProdAcc constraintsLinearized',data:{innerProdAccCoeffsLength:innerProdAccCoeffs.length,innerProdAccCoeffs:innerProdAccCoeffs.map(c=>c.toString())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:252',
+          message: 'InnerProdAcc constraintsLinearized',
+          data: {
+            innerProdAccCoeffsLength: innerProdAccCoeffs.length,
+            innerProdAccCoeffs: innerProdAccCoeffs.map((c) => c.toString()),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'F',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
     for (const coeff of innerProdAccCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
-    
+
     // #region agent log
-    fetch('http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'piop/prover.ts:260',message:'Total constraintsLinearized result',data:{resultLength:result.length,totalExpected:7},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    fetch(
+      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'piop/prover.ts:260',
+          message: 'Total constraintsLinearized result',
+          data: { resultLength: result.length, totalExpected: 7 },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'G',
+        }),
+      },
+    ).catch(() => {})
     // #endregion
-    
+
     return result
   }
 
@@ -283,4 +412,3 @@ export class PiopProver {
     return this.condAdd.result
   }
 }
-

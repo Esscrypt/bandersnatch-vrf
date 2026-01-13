@@ -1,9 +1,9 @@
 /**
  * Twisted Edwards Point Doubling Gadget
- * 
+ *
  * Implements point doubling verification for Twisted Edwards curves.
  * Verifies that doublings are computed correctly: 2(x1, y1) = (x2, y2)
- * 
+ *
  * Matching w3f-plonk-common/src/gadgets/ec/te_doubling.rs
  */
 
@@ -15,7 +15,7 @@ import { AffineColumn } from './affine-column'
 
 /**
  * Doubling gadget for Twisted Edwards curves
- * 
+ *
  * Verifies that a sequence of points are doublings of the initial point:
  * [p, 2p, 4p, ..., 2^(n-1)p]
  */
@@ -26,14 +26,11 @@ export class Doubling {
 
   /**
    * Initialize Doubling gadget
-   * 
+   *
    * @param p - Initial point to double
    * @param domain - Plonk domain
    */
-  static init(
-    p: { x: bigint; y: bigint },
-    domain: Domain,
-  ): Doubling {
+  static init(p: { x: bigint; y: bigint }, domain: Domain): Doubling {
     const doublings = Doubling.doublingsOf(p, domain)
     const doublingsCol = AffineColumn.publicColumn(doublings, domain)
     const notLast = domain.notLastRow
@@ -43,7 +40,7 @@ export class Doubling {
 
   /**
    * Compute doublings of a point: [p, 2p, 4p, ..., 2^(n-1)p]
-   * 
+   *
    * @param p - Initial point
    * @param domain - Domain with capacity n
    * @returns Array of doubled points
@@ -65,12 +62,15 @@ export class Doubling {
 
   /**
    * Double a Twisted Edwards point
-   * 
+   *
    * Formula:
    * x2 = 2.x1.y1 / (a.x1² + y1²)
    * y2 = (y1² - a.x1²) / (2 - a.x1² - y1²)
    */
-  private static doublePoint(p: { x: bigint; y: bigint }): { x: bigint; y: bigint } {
+  private static doublePoint(p: { x: bigint; y: bigint }): {
+    x: bigint
+    y: bigint
+  } {
     const { a } = BANDERSNATCH_PARAMS.CURVE_COEFFICIENTS
     const p_mod = BANDERSNATCH_PARAMS.FIELD_MODULUS
 
@@ -119,11 +119,11 @@ export class Doubling {
 
   /**
    * Get constraints for doubling verification
-   * 
+   *
    * Constraints verify:
    * 1. x2.(a.x1² + y1²) - 2.x1.y1 = 0
    * 2. y2.(2 - a.x1² - y1²) + a.x1² - y1² = 0
-   * 
+   *
    * Where (x1, y1) is current point and (x2, y2) is doubled point
    */
   constraints(): bigint[][] {
@@ -203,10 +203,12 @@ export class Doubling {
 
   /**
    * Get linearized constraints at point z
-   * 
+   *
    * Used in PIOP verifier
    */
-  constraintsLinearized(z: bigint): Array<{ coeffs: bigint[]; degree: number }> {
+  constraintsLinearized(
+    z: bigint,
+  ): Array<{ coeffs: bigint[]; degree: number }> {
     const Fr = bls12_381.fields.Fr
     const { a } = BANDERSNATCH_PARAMS.CURVE_COEFFICIENTS
 
@@ -298,7 +300,7 @@ export class DoublingValues {
 
   /**
    * Get coefficients for linearized constraints
-   * 
+   *
    * Returns (x2_coeff, y2_coeff) where:
    * - x2_coeff = (a.x1² + y1²) * not_last
    * - y2_coeff = (2 - a.x1² - y1²) * not_last
@@ -347,4 +349,3 @@ export class DoublingValues {
     return [c1, c2]
   }
 }
-

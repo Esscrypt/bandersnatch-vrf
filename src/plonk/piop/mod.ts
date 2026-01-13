@@ -1,15 +1,15 @@
 /**
  * PIOP Module
- * 
+ *
  * Main module for Polynomial Interactive Oracle Proofs (PIOP)
  * Matches w3f-ring-proof/src/piop/mod.rs
  */
 
-import type { PiopParams, FixedColumns } from './params'
+import type { FixedColumns, PiopParams } from './params'
 
 /**
  * Columns Committed Trait
- * 
+ *
  * Interface for converting commitments to a vector
  */
 export interface ColumnsCommited<C> {
@@ -18,7 +18,7 @@ export interface ColumnsCommited<C> {
 
 /**
  * Columns Evaluated Trait
- * 
+ *
  * Interface for converting evaluations to a vector
  */
 export interface ColumnsEvaluated {
@@ -27,7 +27,7 @@ export interface ColumnsEvaluated {
 
 /**
  * Ring Commitments
- * 
+ *
  * Commitments to witness columns in the ring proof
  */
 export class RingCommitments implements ColumnsCommited<Uint8Array> {
@@ -49,13 +49,18 @@ export class RingCommitments implements ColumnsCommited<Uint8Array> {
   }
 
   toVec(): Uint8Array[] {
-    return [this.bits, this.innProdAcc, this.condAddAcc[0]!, this.condAddAcc[1]!]
+    return [
+      this.bits,
+      this.innProdAcc,
+      this.condAddAcc[0]!,
+      this.condAddAcc[1]!,
+    ]
   }
 }
 
 /**
  * Ring Evaluations
- * 
+ *
  * Evaluations of all columns at a point zeta
  */
 export class RingEvaluations implements ColumnsEvaluated {
@@ -102,7 +107,7 @@ export type { FixedColumns } from './params'
 
 /**
  * Fixed Columns Committed
- * 
+ *
  * Commitments to fixed columns
  */
 export interface FixedColumnsCommitted {
@@ -114,7 +119,7 @@ export interface FixedColumnsCommitted {
 
 /**
  * Prover Key
- * 
+ *
  * Contains all information needed by the prover
  */
 export interface ProverKey {
@@ -128,7 +133,7 @@ export interface ProverKey {
 
 /**
  * Raw KZG Verifier Key
- * 
+ *
  * Matching Rust: RawKzgVerifierKey in fflonk/src/pcs/kzg/params.rs:93-100
  */
 export interface RawKzgVerifierKey {
@@ -142,7 +147,7 @@ export interface RawKzgVerifierKey {
 
 /**
  * Verifier Key
- * 
+ *
  * Contains all information needed by the verifier
  * Matching Rust: VerifierKey in w3f-ring-proof/src/piop/mod.rs:136-141
  */
@@ -155,7 +160,7 @@ export interface VerifierKey {
 
 /**
  * PCS Parameters structure
- * 
+ *
  * Wraps SRS for polynomial commitment scheme
  * Matching Rust: PcsParams trait in fflonk/src/pcs/mod.rs:61-73
  */
@@ -168,13 +173,13 @@ export interface PcsParams {
 
 /**
  * Index function
- * 
+ *
  * Generates prover and verifier keys from PCS parameters, PIOP parameters, and ring keys
- * 
+ *
  * This is the main entry point for setting up a ring proof system
- * 
+ *
  * Matching Rust: w3f-ring-proof/src/piop/mod.rs:166-210
- * 
+ *
  * @param pcsParams - Polynomial commitment scheme parameters (PcsParams or unknown for backward compatibility)
  * @param piopParams - PIOP parameters
  * @param keys - Ring public keys
@@ -185,10 +190,12 @@ export function index(
   pcsParams: unknown, // Currently unused - SRS is passed directly to prover
   piopParams: PiopParams,
   keys: Array<{ x: bigint; y: bigint }>,
-  computeRingCommitment?: (ringKeys: Array<{ x: bigint; y: bigint }>) => Uint8Array,
+  computeRingCommitment?: (
+    ringKeys: Array<{ x: bigint; y: bigint }>,
+  ) => Uint8Array,
 ): [ProverKey, VerifierKey] {
   void pcsParams // SRS is passed directly to prover, not through pcsParams yet
-  
+
   // Build fixed columns
   const fixedColumns = piopParams.fixedColumns(keys)
 
@@ -241,4 +248,3 @@ export function index(
 export type { PiopParams } from './params'
 export { PiopProver } from './prover'
 export { PiopVerifier } from './verifier'
-

@@ -1,6 +1,6 @@
 /**
  * PIOP Parameters
- * 
+ *
  * Configuration parameters for Polynomial Interactive Oracle Proofs (PIOP)
  * Matches w3f-ring-proof/src/piop/params.rs
  */
@@ -15,7 +15,7 @@ import { Doubling } from '../gadgets/doubling'
 
 /**
  * PIOP Parameters
- * 
+ *
  * Contains domain, curve parameters, and base points for ring proofs
  */
 export class PiopParams {
@@ -28,7 +28,7 @@ export class PiopParams {
 
   /**
    * Initialize PIOP parameters
-   * 
+   *
    * @param domain - Polynomial evaluation domain
    * @param h - Blinding base point (Pedersen VRF base)
    * @param seed - Accumulator seed point (ACCUMULATOR_SEED_POINT)
@@ -47,7 +47,14 @@ export class PiopParams {
     // The -1 accounts for the last cells that remain unconstrained
     const keysetPartSize = domain.capacity - scalarBitlen - 1
 
-    return new PiopParams(domain, scalarBitlen, keysetPartSize, h, seed, padding)
+    return new PiopParams(
+      domain,
+      scalarBitlen,
+      keysetPartSize,
+      h,
+      seed,
+      padding,
+    )
   }
 
   private constructor(
@@ -68,7 +75,7 @@ export class PiopParams {
 
   /**
    * Get fixed columns for ring proof
-   * 
+   *
    * @param keys - Ring public keys
    * @returns Fixed columns (points, ring selector, and doublings of G)
    */
@@ -92,7 +99,7 @@ export class PiopParams {
 
   /**
    * Create points column
-   * 
+   *
    * Structure: [keys..., padding..., powers_of_h..., 0]
    * Total length: domain.capacity - 1
    */
@@ -124,7 +131,7 @@ export class PiopParams {
 
   /**
    * Compute doublings of generator G using Doubling gadget
-   * 
+   *
    * Matching Rust: doublings_of_g_col() in params.rs
    * Returns AffineColumn with [G, 2G, 4G, ..., 2^(n-1)G]
    */
@@ -134,16 +141,16 @@ export class PiopParams {
       x: BandersnatchCurve.GENERATOR.x,
       y: BandersnatchCurve.GENERATOR.y,
     }
-    
+
     // Use Doubling gadget to compute doublings
     const doublings = Doubling.doublingsOf(g, this.domain)
-    
+
     return AffineColumn.publicColumn(doublings, this.domain)
   }
 
   /**
    * Compute powers of 2 multiples of H: [H, 2H, 4H, ..., 2^(scalar_bitlen-1)H]
-   * 
+   *
    * Note: This is used for the points column, not for doublings_of_g
    * For doublings_of_g, use doublingsOfG() which uses the Doubling gadget
    */
@@ -154,7 +161,7 @@ export class PiopParams {
 
   /**
    * Get scalar part as bits
-   * 
+   *
    * @param scalar - Scalar value to convert to bits
    * @returns Array of boolean values (little-endian)
    */
@@ -168,7 +175,7 @@ export class PiopParams {
 
   /**
    * Get keyset part selector
-   * 
+   *
    * Returns: [1, 1, ..., 1 (keyset_part_size times), 0, 0, ..., 0 (scalar_bitlen times)]
    */
   keysetPartSelector(): bigint[] {
@@ -183,10 +190,10 @@ export class PiopParams {
   static getAccumulatorSeedPoint(): { x: bigint; y: bigint } {
     // Parse ACCUMULATOR_SEED_POINT from config
     const seedBytes = hexToBytes(BANDERSNATCH_VRF_CONFIG.ACCUMULATOR_SEED_POINT)
-    
+
     // Use BandersnatchCurve.bytesToPoint to decompress the point
     const point = BandersnatchCurve.bytesToPoint(seedBytes)
-    
+
     return { x: point.x, y: point.y }
   }
 
@@ -195,17 +202,17 @@ export class PiopParams {
    */
   static getPaddingPoint(): { x: bigint; y: bigint } {
     const paddingBytes = hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
-    
+
     // Use BandersnatchCurve.bytesToPoint to decompress the point
     const point = BandersnatchCurve.bytesToPoint(paddingBytes)
-    
+
     return { x: point.x, y: point.y }
   }
 }
 
 /**
  * Fixed columns structure
- * 
+ *
  * Matching Rust: FixedColumns in piop/mod.rs
  */
 export interface FixedColumns {
@@ -213,4 +220,3 @@ export interface FixedColumns {
   ringSelector: FieldColumn
   doublingsOfG: AffineColumn
 }
-

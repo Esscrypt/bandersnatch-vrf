@@ -1,6 +1,6 @@
 /**
  * Fixed Cells Gadget
- * 
+ *
  * Constrains specific cells in a column to have fixed values
  * Uses Lagrange basis polynomials to enforce: col[i] = value
  */
@@ -10,7 +10,7 @@ import type { Domain, FieldColumn } from '../domain/domain'
 
 /**
  * Fixed Cells Gadget
- * 
+ *
  * Constrains column to have specific values at first and last positions
  */
 export class FixedCells {
@@ -20,7 +20,7 @@ export class FixedCells {
 
   /**
    * Initialize FixedCells gadget
-   * 
+   *
    * @param col - Column to constrain
    * @param domain - Plonk domain
    */
@@ -52,20 +52,20 @@ export class FixedCells {
   constraints(): bigint[][] {
     const Fr = bls12_381.fields.Fr
     const domain4xSize = this.col.evals4x.length
-    
+
     // Get cell values
     const colFirst = this.col.evals[0]!
     const colLast = this.col.evals[this.col.len - 1]!
-    
+
     // Get evaluations over 4x domain
     const col = this.col.evals4x
     const lFirst = this.lFirst.evals4x
     const lLast = this.lLast.evals4x
-    
+
     // Create constant evaluations for cell values
     const colFirstConst = Array(domain4xSize).fill(colFirst)
     const colLastConst = Array(domain4xSize).fill(colLast)
-    
+
     // Compute constraint: L_first * (col - col[0]) + L_last * (col - col[n-1])
     const constraint: bigint[] = []
     for (let i = 0; i < domain4xSize; i++) {
@@ -74,18 +74,18 @@ export class FixedCells {
       const lLastF = Fr.create(lLast[i]!)
       const colFirstF = Fr.create(colFirstConst[i]!)
       const colLastF = Fr.create(colLastConst[i]!)
-      
+
       // L_first * (col - col[0])
       const c1 = Fr.mul(lFirstF, Fr.sub(colF, colFirstF))
-      
+
       // L_last * (col - col[n-1])
       const c2 = Fr.mul(lLastF, Fr.sub(colF, colLastF))
-      
+
       // Sum
       const result = Fr.add(c1, c2)
       constraint.push(result)
     }
-    
+
     return [constraint]
   }
 
@@ -149,9 +149,12 @@ export class FixedCellsValues {
       this.lFirst,
       this.colFirst,
     )
-    const c2 = FixedCellsValues.evaluateForCell(this.col, this.lLast, this.colLast)
+    const c2 = FixedCellsValues.evaluateForCell(
+      this.col,
+      this.lLast,
+      this.colLast,
+    )
     const Fr = bls12_381.fields.Fr
     return [Fr.add(c1, c2)]
   }
 }
-

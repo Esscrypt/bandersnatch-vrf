@@ -1,23 +1,19 @@
 /**
  * Conditional Addition Gadget (CondAdd)
- * 
+ *
  * Implements conditional point addition for Twisted Edwards curves.
  * Uses the accumulator seed point as the initial accumulator value.
- * 
+ *
  * This gadget accumulates points conditionally based on a bitmask:
  * - If bit is set: acc = acc + point
  * - If bit is not set: acc = acc (unchanged)
- * 
+ *
  * The accumulator starts from the seed point (ACCUMULATOR_SEED_POINT).
  * The result is computed as: result = final_acc - seed
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import {
-  BANDERSNATCH_PARAMS,
-  mod,
-  modInverse,
-} from '@pbnjam/bandersnatch'
+import { BANDERSNATCH_PARAMS, mod, modInverse } from '@pbnjam/bandersnatch'
 import type { Domain, FieldColumn } from '../domain/domain'
 import type { DensePolynomial } from '../domain/polynomial'
 import { DensePolynomialImpl } from '../domain/polynomial'
@@ -26,7 +22,7 @@ import type { BitColumn } from './bit-column'
 
 /**
  * Conditional Addition Gadget for Twisted Edwards curves
- * 
+ *
  * This gadget implements the accumulator pattern used in ring proofs:
  * - Starts with accumulator seed point
  * - Conditionally adds points based on bitmask
@@ -41,7 +37,7 @@ export class CondAdd {
 
   /**
    * Initialize CondAdd gadget
-   * 
+   *
    * @param bitmask - Bit column indicating which points to add
    * @param points - Points to conditionally add
    * @param seed - Accumulator seed point (ACCUMULATOR_SEED_POINT)
@@ -158,7 +154,7 @@ export class CondAdd {
 
   /**
    * Get constraints for conditional addition
-   * 
+   *
    * Constraint 1: b * (x3 * (y1*y2 + a*x1*x2) - (x1*y1 + x2*y2)) + (1-b) * (x3 - x1) = 0
    * Constraint 2: b * (y3 * (x1*y2 - x2*y1) - (x1*y1 - x2*y2)) + (1-b) * (y3 - y1) = 0
    * Matching Rust: fn constraints(&self) -> Vec<Evaluations<F>>
@@ -167,7 +163,7 @@ export class CondAdd {
     const Fr = bls12_381.fields.Fr
     const domain4xSize = this.bitmask.col.evals4x.length
     const { a: teA } = BANDERSNATCH_PARAMS.CURVE_COEFFICIENTS
-    
+
     // Get evaluations over 4x domain
     const b = this.bitmask.col.evals4x
     const x1 = this.acc.xs.evals4x
@@ -177,15 +173,15 @@ export class CondAdd {
     const x3 = this.acc.xs.shifted4x()
     const y3 = this.acc.ys.shifted4x()
     const notLast = this.notLast.evals4x
-    
+
     // Create constant evaluations
     const one = Array(domain4xSize).fill(Fr.ONE)
     const teACoeff = Array(domain4xSize).fill(BigInt(teA))
-    
+
     // Compute constraints
     const c1: bigint[] = []
     const c2: bigint[] = []
-    
+
     for (let i = 0; i < domain4xSize; i++) {
       const bF = Fr.create(b[i]!)
       const x1F = Fr.create(x1[i]!)
@@ -197,88 +193,92 @@ export class CondAdd {
       const oneF = Fr.create(one[i]!)
       const teAF = Fr.create(teACoeff[i]!)
       const notLastF = Fr.create(notLast[i]!)
-      
+
       // Constraint 1: b * (x3 * (y1*y2 + a*x1*x2) - (x1*y1 + x2*y2)) + (1-b) * (x3 - x1)
       const y1y2 = Fr.mul(y1F, y2F)
       const ax1x2 = Fr.mul(teAF, Fr.mul(x1F, x2F))
       const y1y2PlusAx1x2 = Fr.add(y1y2, ax1x2)
       const x3TimesY1y2PlusAx1x2 = Fr.mul(x3F, y1y2PlusAx1x2)
-      
+
       const x1y1 = Fr.mul(x1F, y1F)
       const x2y2 = Fr.mul(x2F, y2F)
       const x1y1PlusX2y2 = Fr.add(x1y1, x2y2)
-      
+
       const term1 = Fr.sub(x3TimesY1y2PlusAx1x2, x1y1PlusX2y2)
       const bTimesTerm1 = Fr.mul(bF, term1)
-      
+
       const x3MinusX1 = Fr.sub(x3F, x1F)
       const oneMinusB = Fr.sub(oneF, bF)
       const oneMinusBTimesX3MinusX1 = Fr.mul(oneMinusB, x3MinusX1)
-      
+
       const constraint1 = Fr.add(bTimesTerm1, oneMinusBTimesX3MinusX1)
       c1.push(Fr.mul(constraint1, notLastF))
-      
+
       // Constraint 2: b * (y3 * (x1*y2 - x2*y1) - (x1*y1 - x2*y2)) + (1-b) * (y3 - y1)
       const x1y2 = Fr.mul(x1F, y2F)
       const x2y1 = Fr.mul(x2F, y1F)
       const x1y2MinusX2y1 = Fr.sub(x1y2, x2y1)
       const y3TimesX1y2MinusX2y1 = Fr.mul(y3F, x1y2MinusX2y1)
-      
+
       const x1y1MinusX2y2 = Fr.sub(x1y1, x2y2)
       const term2 = Fr.sub(y3TimesX1y2MinusX2y1, x1y1MinusX2y2)
       const bTimesTerm2 = Fr.mul(bF, term2)
-      
+
       const y3MinusY1 = Fr.sub(y3F, y1F)
       const oneMinusBTimesY3MinusY1 = Fr.mul(oneMinusB, y3MinusY1)
-      
+
       const constraint2 = Fr.add(bTimesTerm2, oneMinusBTimesY3MinusY1)
       c2.push(Fr.mul(constraint2, notLastF))
     }
-    
+
     return [c1, c2]
   }
 
   /**
    * Get linearized constraints at point z
    * Matching Rust: constraints_linearized() returns Vec<DensePolynomial<F>>
-   * 
+   *
    * Computes:
    * - c1_lin = acc_x * c_acc_x + acc_y * c_acc_y (where c_acc_y = 0)
    * - c2_lin = acc_x * c_acc_x + acc_y * c_acc_y (where c_acc_x = 0)
-   * 
+   *
    * Returns: DensePolynomial[] directly (special case - returns polynomials, not coefficients)
    * This is stored in a special property to be handled by PiopProver
    */
   constraintsLinearizedPolynomials(z: bigint): DensePolynomial[] {
     const Fr = bls12_381.fields.Fr
-    
+
     // Evaluate assignment at z to get CondAddValues
     const bitmaskEval = this.bitmask.evaluate(z)
     const pointsEval = this.points.evaluate(z)
     const notLastEval = this.notLast.evaluate(z)
     const accEval = this.acc.evaluate(z)
-    
+
     const vals = new CondAddValues(
       bitmaskEval,
       pointsEval,
       notLastEval,
       accEval,
     )
-    
+
     // Get accumulator polynomials
     const accXPoly = this.acc.xs.poly
     const accYPoly = this.acc.ys.poly
-    
+
     // Compute coefficients for constraint 1
     const [cAccX1] = vals.accCoeffs1()
     // c1_lin = acc_x * c_acc_x + acc_y * c_acc_y (c_acc_y = 0, so just acc_x * c_acc_x)
-    const c1LinCoeffs = accXPoly.coeffs.map(coeff => Fr.mul(Fr.create(coeff), Fr.create(cAccX1)))
-    
+    const c1LinCoeffs = accXPoly.coeffs.map((coeff) =>
+      Fr.mul(Fr.create(coeff), Fr.create(cAccX1)),
+    )
+
     // Compute coefficients for constraint 2
     const [, cAccY2] = vals.accCoeffs2()
     // c2_lin = acc_x * c_acc_x + acc_y * c_acc_y (c_acc_x = 0, so just acc_y * c_acc_y)
-    const c2LinCoeffs = accYPoly.coeffs.map(coeff => Fr.mul(Fr.create(coeff), Fr.create(cAccY2)))
-    
+    const c2LinCoeffs = accYPoly.coeffs.map((coeff) =>
+      Fr.mul(Fr.create(coeff), Fr.create(cAccY2)),
+    )
+
     // Return the two linearized polynomials
     return [
       new DensePolynomialImpl(c1LinCoeffs),
@@ -296,7 +296,6 @@ export class CondAdd {
     // PiopProver will call constraintsLinearizedPolynomials() directly for CondAdd
     return []
   }
-
 }
 
 // Modular arithmetic helpers imported from @pbnjam/bandersnatch
@@ -343,7 +342,7 @@ export class CondAddValues {
     const bTimesY1y2PlusAx1x2 = Fr.mul(b, y1y2PlusAx1x2)
     const oneMinusB = Fr.sub(one, b)
     const inner = Fr.add(bTimesY1y2PlusAx1x2, oneMinusB)
-    
+
     // Multiply by notLast
     const cAccX = Fr.mul(notLastF, inner)
     const cAccY = Fr.ZERO
@@ -371,7 +370,7 @@ export class CondAddValues {
     const bTimesX1y2MinusX2y1 = Fr.mul(b, x1y2MinusX2y1)
     const oneMinusB = Fr.sub(one, b)
     const inner = Fr.add(bTimesX1y2MinusX2y1, oneMinusB)
-    
+
     // Multiply by notLast
     const cAccX = Fr.ZERO
     const cAccY = Fr.mul(notLastF, inner)
@@ -399,7 +398,10 @@ export class CondAddValues {
         Fr.mul(
           b,
           Fr.sub(
-            Fr.mul(x3, Fr.add(Fr.mul(y1, y2), Fr.mul(Fr.create(a), Fr.mul(x1, x2)))),
+            Fr.mul(
+              x3,
+              Fr.add(Fr.mul(y1, y2), Fr.mul(Fr.create(a), Fr.mul(x1, x2))),
+            ),
             Fr.add(Fr.mul(x1, y1), Fr.mul(y2, x2)),
           ),
         ),
@@ -425,4 +427,3 @@ export class CondAddValues {
     return [c1, c2]
   }
 }
-

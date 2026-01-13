@@ -1,6 +1,6 @@
 /**
  * Plonk Domain Implementation
- * 
+ *
  * Implements evaluation domains for Plonk proofs, including FFT support
  * and domain-specific polynomials (Lagrange basis, vanishing polynomials, etc.)
  */
@@ -15,7 +15,7 @@ export const ZK_ROWS = 3 // Zero-knowledge rows for hiding
 
 /**
  * Plonk evaluation domain
- * 
+ *
  * Provides FFT domains and domain-specific polynomials for Plonk proofs
  */
 export class Domain {
@@ -50,7 +50,7 @@ export class Domain {
     const lastRowIndex = this.capacity - 1
     const omega = this.domain1x.omega
     const lastRowValue = this.domain1x.pow(omega, lastRowIndex)
-    
+
     // Polynomial: X - w^(n-1)
     // Evaluations: [w^0 - w^(n-1), w^1 - w^(n-1), ..., w^(n-1) - w^(n-1)]
     const evals: bigint[] = []
@@ -59,7 +59,7 @@ export class Domain {
       const evalValue = this.domain1x.sub(x, lastRowValue)
       evals.push(evalValue)
     }
-    
+
     return new FieldColumn(evals, this.domain1x, this.capacity)
   }
 
@@ -68,12 +68,12 @@ export class Domain {
    */
   private computeLagrangeBasis(i: number): FieldColumn {
     const evals: bigint[] = []
-    
+
     for (let j = 0; j < this.size; j++) {
       const evalValue = j === i ? 1n : 0n
       evals.push(evalValue)
     }
-    
+
     return new FieldColumn(evals, this.domain1x, this.capacity)
   }
 
@@ -100,10 +100,10 @@ export class Domain {
 
   /**
    * Divide polynomial by vanishing polynomial
-   * 
+   *
    * The vanishing polynomial is Z_H(X) = X^n - 1 for domain H of size n
    * This computes the quotient: q(X) = p(X) / Z_H(X)
-   * 
+   *
    * @param poly - Polynomial to divide
    * @returns Quotient polynomial
    */
@@ -111,22 +111,22 @@ export class Domain {
     // Vanishing polynomial: Z_H(X) = X^n - 1
     // We need to compute q(X) such that p(X) = q(X) * Z_H(X) + r(X)
     // where r(X) is the remainder (should be zero for valid constraints)
-    
+
     // Use IFFT to convert from evaluation form to coefficient form
     // In production, this should use proper polynomial division
     const Fr = bls12_381.fields.Fr
     const n = this.size
-    
+
     // If polynomial degree is less than n, quotient is zero
     if (poly.degree < n) {
       return new DensePolynomialImpl([Fr.ZERO])
     }
-    
+
     // Compute quotient coefficients
     // Use IFFT to interpolate evaluations to polynomial coefficients
     const quotientCoeffs: bigint[] = []
     const polyCoeffs = poly.coeffs
-    
+
     // For each coefficient in quotient
     for (let i = 0; i <= poly.degree - n; i++) {
       // Quotient coefficient at position i is polynomial coefficient at position i+n
@@ -134,18 +134,18 @@ export class Domain {
       const coeff = polyCoeffs[i + n] ?? Fr.ZERO
       quotientCoeffs.push(coeff)
     }
-    
+
     // If quotient is empty, return zero polynomial
     if (quotientCoeffs.length === 0) {
       return new DensePolynomialImpl([Fr.ZERO])
     }
-    
+
     return new DensePolynomialImpl(quotientCoeffs)
   }
 
   /**
    * Evaluate domain at point zeta
-   * 
+   *
    * Returns evaluated domain values for verifier
    * Matches w3f-plonk-common/src/domain.rs EvaluatedDomain::new()
    */
@@ -153,22 +153,22 @@ export class Domain {
     const Fr = bls12_381.fields.Fr
     const zetaF = Fr.create(zeta)
     const k = this.hiding ? ZK_ROWS : 0
-    
+
     // Compute z^n by squaring log2(size) times
     let zN = zetaF
     const logSize = Math.log2(this.size)
     for (let i = 0; i < logSize; i++) {
       zN = Fr.sqr(zN)
     }
-    
+
     // z^n - 1 (vanishing polynomial of full domain)
     const zNMinusOne = Fr.sub(zN, Fr.ONE)
-    
+
     // Compute w^{n-1} (group generator inverse)
     const omega = this.domain1x.omega
     const omegaInv = this.domain1x.omegaInv
     let wi = omegaInv // w^{n-1}
-    
+
     // Vanishing polynomial of zk rows: prod = (z - w^{n-1})...(z - w^{n-k})
     let prod = Fr.ONE
     for (let i = 0; i < k; i++) {
@@ -176,40 +176,40 @@ export class Domain {
       prod = Fr.mul(prod, factor)
       wi = Fr.mul(wi, omegaInv) // Move to next zk row
     }
-    
+
     // not_last_row = z - w^{n-(k+1)}
     const notLastRow = Fr.sub(zetaF, wi)
-    
+
     // w^{k+1} - matching Rust exactly
     const wj = Fr.pow(omega, BigInt(k + 1))
-    
+
     // Batch inversion: [z_n_minus_one, z - 1, wj * z - 1]
     const zMinusOne = Fr.sub(zetaF, Fr.ONE)
     const wjZMinusOne = Fr.sub(Fr.mul(wj, zetaF), Fr.ONE)
-    
+
     const inv0 = Fr.inv(zNMinusOne)
     const inv1 = Fr.inv(zMinusOne)
     const inv2 = Fr.inv(wjZMinusOne)
-    
+
     // vanishing_polynomial_inv = prod * inv[0]
     const vanishingPolynomialInv = Fr.mul(prod, inv0)
-    
+
     // l_first = (z^n - 1) / n * inv[1]
     // l_last = (z^n - 1) / n * inv[2]
     // Matching Rust exactly: l_last = z_n_minus_one_div_n * inv[2]
     // where inv[2] = 1/(wj * z - 1) and wj = w^{k+1}
     const sizeInv = Fr.inv(Fr.create(BigInt(this.size)))
     const zNMinusOneDivN = Fr.mul(zNMinusOne, sizeInv)
-    
+
     // l_first = (z^n - 1) / n * inv[1] = (z^n - 1) / (n * (z - 1))
     // This correctly evaluates L_0(z)
     const lFirst = Fr.mul(zNMinusOneDivN, inv1)
-    
+
     // l_last = (z^n - 1) / n * inv[2] = (z^n - 1) / (n * (wj * z - 1))
     // where wj = w^{k+1}
     // Matching Rust exactly - this is the formula Rust uses
     const lLast = Fr.mul(zNMinusOneDivN, inv2)
-    
+
     return {
       notLastRow,
       lFirst,
@@ -243,13 +243,13 @@ export class FFTDomain {
   constructor(size: number) {
     this.size = size
     this.Fr = bls12_381.fields.Fr
-    
+
     // Compute primitive root of unity
     const logN = Math.log2(size)
     if (logN % 1 !== 0) {
       throw new Error(`Domain size must be power of 2, got ${size}`)
     }
-    
+
     const roots = fft.rootsOfUnity(this.Fr, BigInt(size))
     this.omega = roots.omega(logN)
     this.omegaInv = this.Fr.inv(this.omega)
@@ -285,17 +285,17 @@ export class FieldColumn {
   constructor(evals: bigint[], domain: FFTDomain, len: number) {
     this.domain = domain
     this.len = len
-    
+
     // Pad evals to domain size (matching Rust: evals.resize(domain.size(), F::zero()))
     const paddedEvals = [...evals]
     while (paddedEvals.length < domain.size) {
       paddedEvals.push(0n)
     }
     this.evals = paddedEvals
-    
+
     // Interpolate to get polynomial
     this.poly = this.interpolate(this.evals)
-    
+
     // Evaluate on 4x domain
     this.evals4x = this.evaluateOverDomain4x(this.poly)
   }
@@ -306,21 +306,21 @@ export class FieldColumn {
   private interpolate(evals: bigint[]): DensePolynomial {
     // Use IFFT to convert from evaluation form to coefficient form
     const Fr = bls12_381.fields.Fr
-    
+
     // Apply IFFT
-    const coeffs = this.ifft(evals.map(e => Fr.create(e)))
-    
+    const coeffs = this.ifft(evals.map((e) => Fr.create(e)))
+
     return new DensePolynomialImpl(coeffs)
   }
 
   /**
    * IFFT on field elements
-   * 
+   *
    * Uses shared IFFT utility for consistency and maintainability.
    */
   private ifft(values: bigint[]): bigint[] {
     const Fr = bls12_381.fields.Fr
-    
+
     // Use shared IFFT implementation
     return ifftFieldElements(values, this.domain.size, this.domain.omegaInv, Fr)
   }
@@ -331,13 +331,13 @@ export class FieldColumn {
   private evaluateOverDomain4x(poly: DensePolynomial): bigint[] {
     const domain4x = new FFTDomain(4 * this.domain.size)
     const evals: bigint[] = []
-    
+
     for (let i = 0; i < 4 * this.domain.size; i++) {
       const x = domain4x.pow(domain4x.omega, i)
       const evalValue = poly.evaluate(x)
       evals.push(evalValue)
     }
-    
+
     return evals
   }
 
@@ -362,4 +362,3 @@ export class FieldColumn {
 }
 
 // DensePolynomial is defined in polynomial.ts
-

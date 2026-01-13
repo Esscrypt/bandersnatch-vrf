@@ -25,25 +25,32 @@ export class DensePolynomialImpl implements DensePolynomial {
     // Rust: while self.coeffs.last().is_some_and(|c| c.is_zero()) { self.coeffs.pop(); }
     // However, if expectedMaxDegree is provided, we keep zeros up to that degree to match Rust's exact degree requirement
     const truncatedCoeffs = [...coeffs]
-    
+
     // If expectedMaxDegree is provided, ensure we have at least expectedMaxDegree + 1 coefficients
     // This ensures the degree is exactly expectedMaxDegree even if the last coefficient is zero
     // This matches Rust's behavior where the degree is exactly the expected value
-    if (expectedMaxDegree !== undefined && truncatedCoeffs.length <= expectedMaxDegree) {
+    if (
+      expectedMaxDegree !== undefined &&
+      truncatedCoeffs.length <= expectedMaxDegree
+    ) {
       // Pad with zeros up to expectedMaxDegree + 1
       while (truncatedCoeffs.length < expectedMaxDegree + 1) {
         truncatedCoeffs.push(Fr.ZERO)
       }
     }
-    
+
     // Remove trailing zeros, but keep at least expectedMaxDegree + 1 coefficients if specified
-    const minLength = expectedMaxDegree !== undefined ? expectedMaxDegree + 1 : 0
-    while (truncatedCoeffs.length > minLength && Fr.eql(Fr.create(truncatedCoeffs[truncatedCoeffs.length - 1]!), Fr.ZERO)) {
+    const minLength =
+      expectedMaxDegree !== undefined ? expectedMaxDegree + 1 : 0
+    while (
+      truncatedCoeffs.length > minLength &&
+      Fr.eql(Fr.create(truncatedCoeffs[truncatedCoeffs.length - 1]!), Fr.ZERO)
+    ) {
       truncatedCoeffs.pop()
     }
-    
+
     this.coeffs = truncatedCoeffs.length > 0 ? truncatedCoeffs : [Fr.ZERO]
-    
+
     // Find actual degree (highest non-zero coefficient)
     // Matching Rust: polynomial.degree() returns coeffs.len() - 1 after truncation
     // Since we've truncated, degree is just length - 1
@@ -68,4 +75,3 @@ export class DensePolynomialImpl implements DensePolynomial {
     return this.coeffs[i] ?? 0n
   }
 }
-
