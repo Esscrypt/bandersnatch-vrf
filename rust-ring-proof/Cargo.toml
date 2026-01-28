@@ -1,0 +1,30 @@
+[package]
+name = "pbnjam-ring-proof"
+version = "0.1.0"
+edition = "2021"
+description = "Rust connector for w3f ring proof (lines 299-316 logic)"
+
+[lib]
+name = "pbnjam_ring_proof"
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["napi4"] }
+napi-derive = "2"
+
+# Ring proof core: pin 0.0.2 to match ark-vrf (test vectors from ark-vrf-wasm).
+# test-vectors: deterministic hidden-column padding (zeros) so NAPI proof matches WASM byte-for-byte.
+# Prove and verify both use w3f_ring_proof so proof format matches.
+w3f-ring-proof = { version = "0.0.2", default-features = true, features = ["test-vectors"] }
+ark-bls12-381 = { version = "0.5", default-features = true, features = ["curve"] }
+ark-ed-on-bls12-381-bandersnatch = { version = "0.5", default-features = true }
+ark-serialize = { version = "0.5", default-features = true, features = ["derive"] }
+ark-ff = { version = "0.5", default-features = true }
+w3f-pcs = { version = "0.0.2", default-features = true }
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1

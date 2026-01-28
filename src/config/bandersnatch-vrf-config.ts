@@ -120,6 +120,12 @@ export const BANDERSNATCH_VRF_CONFIG = {
   DOMAIN_SIZE: 2048,
 
   /**
+   * Transcript label for Fiat-Shamir (ring proof).
+   * Must match prover and verifier (e.g. "Bandersnatch_SHA-512_ELL2").
+   */
+  TRANSCRIPT_LABEL: 'Bandersnatch_SHA-512_ELL2',
+
+  /**
    * Secret key size in bytes
    */
   SECRET_KEY_SIZE: 32,

@@ -109,7 +109,7 @@ bandersnatch-vrf verify ring --input verify.json
   "auxData": "0x...", // optional
   "ringKeys": ["0x...", "0x...", ...],
   "proverIndex": 0,
-  "srsFilePath": "./test-data/srs/zcash-srs-2-11-compressed.bin",
+  "srsFilePath": "./test-data/srs/zcash-srs-2-11-uncompressed.bin",
   "useWasm": false // optional, default: false
 }
 ```
@@ -136,7 +136,7 @@ bandersnatch-vrf verify ring --input verify.json
   "input": "0x...",
   "serializedResult": "0x...",
   "auxData": "0x...", // optional
-  "srsFilePath": "./test-data/srs/zcash-srs-2-11-compressed.bin",
+  "srsFilePath": "./test-data/srs/zcash-srs-2-11-uncompressed.bin",
   "useWasm": false // optional, default: false
 }
 ```
@@ -266,6 +266,31 @@ bun run test
 ```bash
 bun run build
 ```
+
+### Ring VRF benchmarks (WASM vs W3F)
+
+The ring end-to-end test runs both **WASM** (ark-vrf-wasm) and **W3F** (native Rust when built, else WASM) prover and verifier and reports execution time for each.
+
+**Command** (from `packages/bandersnatch-vrf`):
+
+```bash
+bun test src/__tests__/ring-end-to-end.test.ts
+```
+
+**Hardware** (machine used for the numbers below):
+
+- **CPU**: Apple M4
+- **Arch**: arm64
+- **Cores**: 10
+
+**Typical results** (2 test vectors, ring size 8):
+
+| Vector | WASM prove | WASM verify | W3F prove | W3F verify |
+|--------|------------|-------------|-----------|------------|
+| 1      | ~1400 ms   | ~220 ms     | ~220 ms   | ~72 ms     |
+| 2      | ~740 ms    | ~170 ms     | ~190 ms   | ~66 ms     |
+
+W3F (native) is roughly **4–6× faster** on prove and **~3× faster** on verify. Both backends produce identical gamma/beta and verify successfully; WASM output is checked against the bandersnatch-vrf-spec test vectors.
 
 ## Notes
 

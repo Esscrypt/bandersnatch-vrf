@@ -1,4 +1,4 @@
-import type { RingVRFProverWasm } from '@pbnjam/bandersnatch-vrf'
+import type { RingVRFProverW3F, RingVRFProverWasm } from '../prover'
 import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { type Hex, hexToBytes } from 'viem'
@@ -46,7 +46,7 @@ import { type Hex, hexToBytes } from 'viem'
  */
 export function getRingRoot(
   bandersnatchKeys: Uint8Array[],
-  prover: RingVRFProverWasm,
+  prover: RingVRFProverWasm | RingVRFProverW3F,
 ): Safe<Uint8Array> {
   if (bandersnatchKeys.length === 0) {
     return safeError(new Error('Cannot create ring root from empty key set'))

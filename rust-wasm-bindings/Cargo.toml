@@ -1,0 +1,45 @@
+[package]
+name = "ark-vrf-wasm"
+version = "0.1.0"
+edition = "2024"
+authors = ["Davide Galassi <davxy@datawok.net>"]
+license = "MIT"
+description = "WASM bindings for ark-vrf ring proof functionality"
+repository = "https://github.com/davxy/ark-vrf"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+console_error_panic_hook = { version = "0.1", optional = true }
+getrandom = { version = "0.2", features = ["js"] }
+
+# Core dependencies - use path to parent ark-vrf
+# Enable test-vectors feature for deterministic proof generation (matches test vectors)
+ark-vrf = { path = "..", default-features = false, features = ["ring", "bandersnatch", "test-vectors"] }
+
+# Arkworks dependencies
+ark-bls12-381 = { version = "0.5", default-features = false, features = ["curve"] }
+ark-ed-on-bls12-381-bandersnatch = { version = "0.5", default-features = false }
+ark-std = { version = "0.5", default-features = false }
+ark-ff = { version = "0.5", default-features = false }
+ark-ec = { version = "0.5", default-features = false }
+ark-serialize = { version = "0.5", default-features = false, features = ["derive"] }
+
+[features]
+default = ["std", "console_error_panic_hook"]
+std = [
+    "ark-std/std",
+    "ark-ff/std",
+    "ark-ec/std",
+    "ark-serialize/std",
+    "ark-vrf/std",
+]
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1    # Better optimization
+

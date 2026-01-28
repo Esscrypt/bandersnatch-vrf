@@ -11,3 +11,11 @@ docs
 proof.json
 proof-*.json
 bin/
+
+# Rust connector build artifacts
+rust-ring-proof/target/
+rust-ring-proof/native/
+
+# WASM connector build artifacts
+rust-wasm-bindings/target/
+rust-wasm-bindings/pkg/
