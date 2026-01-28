@@ -1,7 +1,7 @@
 import type { RingVRFProverWasm } from '@pbnjam/bandersnatch-vrf'
 import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
-import { type Hex, hexToBytes, zeroHash } from 'viem'
+import { type Hex, hexToBytes } from 'viem'
 
 /**
  * Calculate Bandersnatch ring root from a set of public keys
@@ -107,9 +107,10 @@ export function extractRingKeysFromValidatorSet(
 
   // Convert validator public keys to Bandersnatch keys
   // Gray Paper: vk_vk_bs ∈ bskey ≡ vk[0:32] (first 32 bytes of validator key)
+  // NOTE: Do NOT filter out zero keys - they need to be kept so they can be replaced
+  // with the padding point during ring commitment computation (extractRingCoordinateVectors)
   const ringKeys = pendingSet
     .map((validator) => validator.bandersnatch)
-    .filter((key) => key !== zeroHash)
     .map((key) => hexToBytes(key))
 
   // Sort keys for deterministic ordering (Gray Paper requirement)
@@ -170,6 +171,81 @@ export function verifyEpochRoot(
   // Step 3: Verify epoch root structure
   if (epochRootBytes.length !== 144) {
     return safeError(new Error('Epoch root must be 144 bytes'))
+  }
+
+  return safeResult(true)
+}
+
+/**
+ * Verify epoch root by computing ring commitment and comparing with expected value
+ *
+ * Gray Paper bandersnatch.tex equation 15:
+ * getRingRoot{sequence{bskey}} ∈ ringroot ≡ commit(sequence{bskey})
+ *
+ * This function performs FULL cryptographic verification by:
+ * 1. Extracting Bandersnatch keys from the validator set
+ * 2. Computing the ring commitment using the WASM prover
+ * 3. Comparing the computed commitment with the expected epoch root
+ *
+ * Use this when you need to verify that a validator set produces a specific epoch root.
+ * This is more expensive than structural validation but provides cryptographic proof.
+ *
+ * @param expectedEpochRoot - Expected 144-byte epoch root (e.g., from staging set)
+ * @param validatorSet - Validator public keys to verify (e.g., from epoch mark)
+ * @param prover - RingVRFProverWasm instance for computing ring commitment
+ * @returns Safe<boolean> - true if computed ring commitment matches expected epoch root
+ */
+export function verifyEpochRootWithProver(
+  expectedEpochRoot: Hex,
+  validatorSet: ValidatorPublicKeys[],
+  prover: RingVRFProverWasm,
+): Safe<boolean> {
+  // Step 1: Validate expected epoch root structure
+  const expectedBytes = hexToBytes(expectedEpochRoot)
+  if (expectedBytes.length !== 144) {
+    return safeError(
+      new Error(
+        `Expected epoch root must be 144 bytes, got ${expectedBytes.length}`,
+      ),
+    )
+  }
+
+  // Step 2: Extract Bandersnatch keys from validator set
+  const bandersnatchKeys = validatorSet.map((validator) =>
+    hexToBytes(validator.bandersnatch),
+  )
+
+  if (bandersnatchKeys.length === 0) {
+    return safeError(
+      new Error('Cannot verify epoch root from empty validator set'),
+    )
+  }
+
+  // Step 3: Compute ring commitment from validator set using WASM prover
+  const [ringRootError, computedRingRoot] = getRingRoot(
+    bandersnatchKeys,
+    prover,
+  )
+  if (ringRootError) {
+    return safeError(
+      new Error(`Failed to compute ring root: ${ringRootError.message}`),
+    )
+  }
+
+  if (!computedRingRoot || computedRingRoot.length !== 144) {
+    return safeError(
+      new Error(
+        `Computed ring root must be 144 bytes, got ${computedRingRoot?.length ?? 0}`,
+      ),
+    )
+  }
+
+  // Step 4: Compare computed ring commitment with expected epoch root
+  // Byte-by-byte comparison for security
+  for (let i = 0; i < 144; i++) {
+    if (computedRingRoot[i] !== expectedBytes[i]) {
+      return safeResult(false)
+    }
   }
 
   return safeResult(true)

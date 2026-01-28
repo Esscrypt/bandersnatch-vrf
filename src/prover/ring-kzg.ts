@@ -9,8 +9,14 @@
 import { pippenger } from '@noble/curves/abstract/curve.js'
 import * as fft from '@noble/curves/abstract/fft.js'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { BANDERSNATCH_PARAMS } from '@pbnjam/bandersnatch'
+import { BANDERSNATCH_PARAMS, BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { bytesToHex } from 'viem'
+import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
+import { Domain } from '../plonk/domain/domain'
+import { PiopParams } from '../plonk/piop/params'
+import { PiopProver } from '../plonk/piop/prover'
+import { PlonkProver } from '../plonk/prover'
+import { SimplePlonkTranscript } from '../plonk/transcript/transcript'
 import {
   bigintToBytes32BE,
   blobToKzgCommitment,
@@ -22,7 +28,6 @@ import {
   verifyKzgProof,
 } from '../utils/kzg-manual'
 import { loadSRSFromFile } from '../utils/srs-loader'
-
 import { PedersenVRFProver } from './pedersen'
 
 export interface RingVRFInput {
@@ -65,6 +70,8 @@ export class RingVRFProver {
   private srsG2: Uint8Array // G2 generator
   private srsG2Tau: Uint8Array // τ*G2 (second G2 point from SRS)
   private piopDomainSize: number // PIOP domain size (used for computeRingCommitment)
+  private piopParams?: PiopParams // PIOP parameters for Plonk-based proofs
+  private plonkProver?: PlonkProver // Plonk prover instance
 
   /**
    * Convert monomial SRS to Lagrangian SRS using batch IFFT on group elements
@@ -341,6 +348,9 @@ export class RingVRFProver {
     console.debug('[RingVRFProver] Lagrangian SRS conversion complete', {
       lagrangianSRSSize: this.lagrangianSRS.length,
     })
+
+    // Initialize Plonk prover/verifier setup (lazy initialization)
+    // This will be initialized when provePlonk is called
   }
 
   /**
@@ -463,6 +473,249 @@ export class RingVRFProver {
   }
 
   /**
+   * Generate Ring VRF proof using Plonk (instead of direct KZG)
+   *
+   * This method uses the Plonk zkSNARK protocol for ring membership proofs,
+   * providing better anonymity and smaller proof sizes compared to direct KZG.
+   *
+   * @param secretKey - Prover's secret key (32 bytes)
+   * @param input - Ring VRF input (ring keys, prover index, etc.)
+   * @returns Ring VRF result with Plonk-based ring proof
+   */
+  provePlonk(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
+    console.debug('Generating Ring VRF proof with Plonk', {
+      ringSize: input.ringKeys.length,
+      proverIndex: input.proverIndex,
+      inputLength: input.input.length,
+    })
+
+    // Step 1: Generate Pedersen VRF proof
+    console.debug('Starting Pedersen VRF proof generation')
+    const pedersenInput = {
+      input: input.input,
+      auxData: input.auxData,
+    }
+    const pedersenResult = PedersenVRFProver.prove(secretKey, pedersenInput)
+    console.debug('Pedersen VRF proof generation completed')
+
+    // Step 2: Initialize PIOP params if not already done
+    if (!this.piopParams) {
+      const domainSize = this.piopDomainSize
+      const domain = new Domain(domainSize, true) // hiding = true
+
+      // Get base points from config
+      // Blinding base h is the Pedersen VRF blinding base point B
+      // Matching Rust: EdwardsAffine::new_unchecked(MontFp!("6150229251051246713677296363717454238956877613358614224171740096471278798312"), ...)
+      const h = {
+        x: BANDERSNATCH_PARAMS.BLINDING_BASE.x,
+        y: BANDERSNATCH_PARAMS.BLINDING_BASE.y,
+      }
+      const seed = PiopParams.getAccumulatorSeedPoint()
+      const padding = PiopParams.getPaddingPoint()
+
+      this.piopParams = PiopParams.setup(domain, h, seed, padding)
+    }
+
+    // Step 3: Convert ring keys to point format
+    const ringKeys: Array<{ x: bigint; y: bigint }> = []
+    for (const keyBytes of input.ringKeys) {
+      const point = BandersnatchCurve.bytesToPoint(keyBytes)
+      // Extract x and y directly from EdwardsPoint
+      // EdwardsPoint from @noble/curves has x and y properties
+      ringKeys.push({ x: point.x, y: point.y })
+    }
+
+    // Step 4: Setup Plonk prover/verifier keys
+    // Compute ring commitment first (needed for verifier key)
+    // This matches Rust: FixedColumns.commit() which commits to points.xs.poly, points.ys.poly, ringSelector.poly
+    const ringCommitmentBytes = this.computeRingCommitment(input.ringKeys)
+
+    // Parse FixedColumnsCommitted from ringCommitment (144 bytes: cx[48] + cy[48] + selector[48])
+    // Matching Rust: FixedColumnsCommitted structure in w3f-ring-proof/src/piop/mod.rs:84-88
+    const fixedColumnsCommitted = {
+      points: [
+        ringCommitmentBytes.slice(0, 48),
+        ringCommitmentBytes.slice(48, 96),
+      ] as [Uint8Array, Uint8Array],
+      ringSelector: ringCommitmentBytes.slice(96, 144),
+    }
+
+    // Build fixed columns (matching Rust: piopParams.fixedColumns(keys))
+    const fixedColumns = this.piopParams.fixedColumns(ringKeys)
+
+    // Create verifier key with actual commitments (not placeholders)
+    // Matching Rust: VerifierKey in w3f-ring-proof/src/piop/mod.rs:136-141
+    const verifierKey = {
+      pcsRawVk: {
+        g1: this.srsG1, // SRS G1 generator (48 bytes compressed)
+        g2: this.srsG2, // SRS G2 generator (96 bytes compressed)
+        tauInG2: this.srsG2Tau, // tau * G2 (96 bytes compressed)
+      },
+      fixedColumnsCommitted,
+    }
+
+    // Create prover key (matching Rust: ProverKey in w3f-ring-proof/src/piop/mod.rs:130-134)
+    const proverKey = {
+      pcsCk: {
+        srsG1Points: this.srsG1Points, // SRS G1 points for committing
+      },
+      fixedColumns,
+      verifierKey,
+    }
+
+    // Step 5: Initialize Plonk prover if not already done
+    if (!this.plonkProver) {
+      const pcsCk = {
+        srsG1Points: this.srsG1Points,
+        srsG1: this.srsG1,
+        srsG2: this.srsG2,
+        srsG2Tau: this.srsG2Tau,
+      }
+      const transcript = SimplePlonkTranscript.new('w3f-ring-proof')
+      // Serialize verifier key for transcript (computed in Step 4)
+      // Rust: VerifierKey implements CanonicalSerialize (w3f-ring-proof/src/piop/mod.rs:136)
+      // Structure: pcsRawVk (G1[48] + G2[96] + G2Tau[96] = 240 bytes) + fixedColumnsCommitted (points[2*48] + ringSelector[48] = 144 bytes)
+      // Total: 240 + 144 = 384 bytes
+      const verifierKeyBytes = new Uint8Array(384)
+      let offset = 0
+
+      // Serialize pcsRawVk: g1 (48) + g2 (96) + tauInG2 (96) = 240 bytes
+      verifierKeyBytes.set(verifierKey.pcsRawVk.g1, offset)
+      offset += 48
+      verifierKeyBytes.set(verifierKey.pcsRawVk.g2, offset)
+      offset += 96
+      verifierKeyBytes.set(verifierKey.pcsRawVk.tauInG2, offset)
+      offset += 96
+
+      // Serialize fixedColumnsCommitted: points[0] (48) + points[1] (48) + ringSelector (48) = 144 bytes
+      verifierKeyBytes.set(verifierKey.fixedColumnsCommitted.points[0], offset)
+      offset += 48
+      verifierKeyBytes.set(verifierKey.fixedColumnsCommitted.points[1], offset)
+      offset += 48
+      verifierKeyBytes.set(
+        verifierKey.fixedColumnsCommitted.ringSelector,
+        offset,
+      )
+
+      this.plonkProver = PlonkProver.init(pcsCk, verifierKeyBytes, transcript)
+    }
+
+    // Step 6: Build PIOP prover
+    const secretScalar = bytesToBigIntLittleEndian(secretKey)
+    const piopProver = PiopProver.build(
+      this.piopParams,
+      proverKey.fixedColumns,
+      input.proverIndex,
+      secretScalar,
+    )
+
+    // Step 7: Generate Plonk proof
+    console.debug('Generating Plonk proof')
+    const plonkProof = this.plonkProver.prove(piopProver)
+    console.debug('Plonk proof generated')
+
+    // Step 8: Use ring commitment computed in Step 4
+    // The ring commitment is the FixedColumnsCommitted structure (144 bytes)
+    // This matches Rust: Ring::with_keys() which computes cx, cy, selector
+    const ringCommitment = ringCommitmentBytes
+
+    // Step 9: Serialize Plonk proof
+    // Rust serialization order (matching CanonicalSerialize):
+    // 1. Column commitments (4 commitments × 48 bytes = 192 bytes)
+    //    - bits, innProdAcc, condAddAcc[0], condAddAcc[1]
+    // 2. Column evaluations at zeta (7 evaluations × 32 bytes = 224 bytes)
+    //    - points[0], points[1], ringSelector, bits, innProdAcc, condAddAcc[0], condAddAcc[1]
+    // 3. Quotient commitment (48 bytes)
+    // 4. Linearization evaluation at zeta*omega (32 bytes)
+    // 5. Aggregated KZG proof at zeta (48 bytes)
+    // 6. Linearization KZG proof at zeta*omega (48 bytes)
+    // Total: 192 + 224 + 48 + 32 + 48 + 48 = 592 bytes (for standard ring size)
+    const commitments = plonkProof.columnCommitments.toVec()
+    const evaluations = plonkProof.columnsAtZeta.toVec()
+
+    const COMMITMENT_SIZE = 48 // Compressed G1 point
+    const EVALUATION_SIZE = 32 // Field element (big-endian)
+
+    const ringProof = new Uint8Array(
+      commitments.length * COMMITMENT_SIZE +
+        evaluations.length * EVALUATION_SIZE +
+        COMMITMENT_SIZE + // quotientCommitment
+        EVALUATION_SIZE + // linAtZetaOmega
+        COMMITMENT_SIZE + // aggAtZetaProof
+        COMMITMENT_SIZE, // linAtZetaOmegaProof
+    )
+
+    let offset = 0
+
+    // 1. Column commitments (192 bytes)
+    for (const commitment of commitments) {
+      if (commitment.length !== COMMITMENT_SIZE) {
+        throw new Error(
+          `Invalid commitment size: expected ${COMMITMENT_SIZE}, got ${commitment.length}`,
+        )
+      }
+      ringProof.set(commitment, offset)
+      offset += COMMITMENT_SIZE
+    }
+
+    // 2. Column evaluations at zeta (224 bytes)
+    for (const evalValue of evaluations) {
+      const evalBytes = bigintToBytes32BE(evalValue)
+      ringProof.set(evalBytes, offset)
+      offset += EVALUATION_SIZE
+    }
+
+    // 3. Quotient commitment (48 bytes)
+    if (plonkProof.quotientCommitment.length !== COMMITMENT_SIZE) {
+      throw new Error(
+        `Invalid quotient commitment size: expected ${COMMITMENT_SIZE}, got ${plonkProof.quotientCommitment.length}`,
+      )
+    }
+    ringProof.set(plonkProof.quotientCommitment, offset)
+    offset += COMMITMENT_SIZE
+
+    // 4. Linearization evaluation at zeta*omega (32 bytes)
+    const linEvalBytes = bigintToBytes32BE(plonkProof.linAtZetaOmega)
+    ringProof.set(linEvalBytes, offset)
+    offset += EVALUATION_SIZE
+
+    // 5. Aggregated KZG proof at zeta (48 bytes)
+    if (plonkProof.aggAtZetaProof.length !== COMMITMENT_SIZE) {
+      throw new Error(
+        `Invalid aggregated proof size: expected ${COMMITMENT_SIZE}, got ${plonkProof.aggAtZetaProof.length}`,
+      )
+    }
+    ringProof.set(plonkProof.aggAtZetaProof, offset)
+    offset += COMMITMENT_SIZE
+
+    // 6. Linearization KZG proof at zeta*omega (48 bytes)
+    if (plonkProof.linAtZetaOmegaProof.length !== COMMITMENT_SIZE) {
+      throw new Error(
+        `Invalid linearization proof size: expected ${COMMITMENT_SIZE}, got ${plonkProof.linAtZetaOmegaProof.length}`,
+      )
+    }
+    ringProof.set(plonkProof.linAtZetaOmegaProof, offset)
+    offset += COMMITMENT_SIZE
+
+    console.debug('Plonk proof serialized', {
+      ringProofSize: ringProof.length,
+      ringCommitmentSize: ringCommitment.length,
+      commitmentsCount: commitments.length,
+      evaluationsCount: evaluations.length,
+    })
+
+    return {
+      gamma: pedersenResult.gamma,
+      proof: {
+        pedersenProof: pedersenResult.proof,
+        ringCommitment,
+        ringProof,
+        proverIndex: input.proverIndex,
+      },
+    }
+  }
+
+  /**
    * Compute ring commitment from public keys only (Gray Paper compliant)
    *
    * Gray Paper bandersnatch.tex equation 15:
@@ -484,8 +737,27 @@ export class RingVRFProver {
     const scalarBitlen = 253 // Bandersnatch scalar field bit length
     const keysetPartSize = domainSize - scalarBitlen - 1 // domain.capacity - scalar_bitlen - 1
 
+    // #region agent log
+    console.log('[computeRingCommitment] Start:', {
+      domainSize,
+      scalarBitlen,
+      keysetPartSize,
+      ringKeysLength: ringKeys.length,
+      lagrangianSRSSize: this.lagrangianSRS.length,
+    })
+    // #endregion
+
     // Reuse shared coordinate extraction logic
     const { xs, ys } = extractRingCoordinateVectors(ringKeys)
+
+    // #region agent log
+    console.log('[computeRingCommitment] Extracted coordinates:', {
+      xsLength: xs.length,
+      ysLength: ys.length,
+      xsFirst3: xs.slice(0, 3).map((x) => x.toString(16)),
+      ysFirst3: ys.slice(0, 3).map((y) => y.toString(16)),
+    })
+    // #endregion
 
     // Compute MSM for cx and cy using Lagrangian SRS
     // This matches Rust implementation: srs.lis_in_g1 (Lagrangian SRS)
@@ -578,6 +850,16 @@ export class RingVRFProver {
       )
     }
 
+    // #region agent log
+    console.log('[computeRingCommitment] SRS bases structure:', {
+      vectorLength,
+      keysSrsLength,
+      powersOfHSrsStart,
+      deserializedBasesLength: deserializedBases.length,
+      lagrangianSRSSize: this.lagrangianSRS.length,
+    })
+    // #endregion
+
     // Prepare scalars for MSM
     // Note: xs and ys are already reduced modulo BLS12_381_SCALAR_FIELD_ORDER
     // (same as BANDERSNATCH_PARAMS.FIELD_MODULUS) in extractRingCoordinateVectors,
@@ -594,8 +876,28 @@ export class RingVRFProver {
     // - Constant-time for same input size
     const cx = pippenger(bls12_381.G1.Point, deserializedBases, xsScalars)
 
+    // #region agent log
+    const cxBytes = cx.toBytes(true)
+    const cxHex = Array.from(cxBytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    console.log('[computeRingCommitment] Computed cx:', {
+      cxHex: `${cxHex.slice(0, 64)}...`,
+    })
+    // #endregion
+
     // Compute cy = MSM(bases, ys) using Pippenger's algorithm
     const cy = pippenger(bls12_381.G1.Point, deserializedBases, ysScalars)
+
+    // #region agent log
+    const cyBytes = cy.toBytes(true)
+    const cyHex = Array.from(cyBytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    console.log('[computeRingCommitment] Computed cy:', {
+      cyHex: `${cyHex.slice(0, 64)}...`,
+    })
+    // #endregion
 
     // Compute selector = g1 - sum(lagrangianSRS[keyset_part_size..])
     // Rust: selector_inv = srs.lis_in_g1[piop_params.keyset_part_size..].iter().sum()
@@ -615,11 +917,35 @@ export class RingVRFProver {
     )
     const selector = g1Point.subtract(selectorInv)
 
+    // #region agent log
+    const selectorBytes = selector.toBytes(true)
+    const selectorHex = Array.from(selectorBytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    console.log('[computeRingCommitment] Computed selector:', {
+      selectorHex: `${selectorHex.slice(0, 64)}...`,
+      selectorPointsLength: selectorPoints.length,
+      powersOfHSrsStart,
+    })
+    // #endregion
+
     // Return FixedColumnsCommitted: [cx (48), cy (48), selector (48)] = 144 bytes
     const result = new Uint8Array(144)
     result.set(cx.toBytes(true), 0)
     result.set(cy.toBytes(true), 48)
     result.set(selector.toBytes(true), 96)
+
+    // #region agent log
+    const resultHex = Array.from(result)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+    console.log('[computeRingCommitment] Final result:', {
+      resultHex: `${resultHex.slice(0, 128)}...`,
+      cxHex: resultHex.slice(0, 96),
+      cyHex: resultHex.slice(96, 192),
+      selectorHex: resultHex.slice(192, 288),
+    })
+    // #endregion
 
     return result
   }

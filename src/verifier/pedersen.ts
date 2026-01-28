@@ -10,6 +10,8 @@ import {
   Bandersnatch,
   BandersnatchCurve,
 } from '@pbnjam/bandersnatch'
+import { hexToBytes } from 'viem'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
@@ -22,6 +24,19 @@ import { type PedersenVRFProof, PedersenVRFProver } from '../prover/pedersen'
  * Implements Pedersen VRF proof verification
  */
 export class PedersenVRFVerifier {
+  /**
+   * Check if bytes are all zero, and if so, return padding point bytes
+   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
+   */
+  private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
+    // Check if all bytes are zero
+    const isAllZero = bytes.every((byte) => byte === 0)
+    if (isAllZero) {
+      // Return padding point bytes instead
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
+    return bytes
+  }
   /**
    * Verify Pedersen VRF proof according to bandersnatch-vrf-spec
    * The gamma (output) is provided as a parameter
@@ -99,11 +114,17 @@ export class PedersenVRFVerifier {
       const { Y_bar, R, O_k, s, s_b } = proof
 
       // Convert proof components to curve points and scalars
-      const IPoint = BandersnatchCurve.bytesToPoint(I)
-      const OPoint = BandersnatchCurve.bytesToPoint(O)
-      const Y_barPoint = BandersnatchCurve.bytesToPoint(Y_bar)
-      const RPoint = BandersnatchCurve.bytesToPoint(R)
-      const O_kPoint = BandersnatchCurve.bytesToPoint(O_k)
+      // Check for all-zero bytes and use padding point if needed
+      const IBytesChecked = this.usePaddingPointIfZero(I)
+      const OBytesChecked = this.usePaddingPointIfZero(O)
+      const Y_barBytesChecked = this.usePaddingPointIfZero(Y_bar)
+      const RBytesChecked = this.usePaddingPointIfZero(R)
+      const O_kBytesChecked = this.usePaddingPointIfZero(O_k)
+      const IPoint = BandersnatchCurve.bytesToPoint(IBytesChecked)
+      const OPoint = BandersnatchCurve.bytesToPoint(OBytesChecked)
+      const Y_barPoint = BandersnatchCurve.bytesToPoint(Y_barBytesChecked)
+      const RPoint = BandersnatchCurve.bytesToPoint(RBytesChecked)
+      const O_kPoint = BandersnatchCurve.bytesToPoint(O_kBytesChecked)
 
       const sScalar = bytesToBigIntLittleEndian(s)
       const s_bScalar = bytesToBigIntLittleEndian(s_b)

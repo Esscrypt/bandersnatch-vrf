@@ -1,6 +1,6 @@
 /**
  * CLI for Bandersnatch VRF
- * 
+ *
  * Provides command-line interface for proving and verifying VRF proofs
  * using JSON file inputs
  */
@@ -181,29 +181,36 @@ interface RingVerifyInput {
 /**
  * Prove IETF VRF
  */
-export async function proveIETF(inputPath: string, outputPath?: string): Promise<void> {
+export async function proveIETF(
+  inputPath: string,
+  outputPath?: string,
+): Promise<void> {
   const input = loadJson<IETFProveInput>(inputPath)
-  
+
   // Support both CLI format and test vector format
   const secretKeyHex = input.secretKey ?? input.sk
   const inputHex = input.input ?? input.alpha ?? ''
   const auxDataHex = input.auxData ?? input.ad
-  
+
   if (!secretKeyHex) {
     throw new Error('Missing secretKey or sk field in input JSON')
   }
-  
+
   const secretKey = hexToBytes(secretKeyHex)
   const inputData = hexToBytes(inputHex)
   const auxData = auxDataHex ? hexToBytes(auxDataHex) : undefined
-  
-  const result: IETFVRFResult = IETFVRFProver.prove(secretKey, inputData, auxData)
-  
+
+  const result: IETFVRFResult = IETFVRFProver.prove(
+    secretKey,
+    inputData,
+    auxData,
+  )
+
   const output: IETFProveOutput = {
     gamma: bytesToHexString(result.gamma),
     proof: bytesToHexString(result.proof),
   }
-  
+
   if (outputPath) {
     writeJson(outputPath, output)
     console.log(`Proof written to ${outputPath}`)
@@ -217,16 +224,16 @@ export async function proveIETF(inputPath: string, outputPath?: string): Promise
  */
 export async function verifyIETF(inputPath: string): Promise<void> {
   const input = loadJson<IETFVerifyInput>(inputPath)
-  
+
   // Support both CLI format and test vector format
   const publicKeyHex = input.publicKey ?? input.pk
   const inputHex = input.input ?? input.alpha ?? ''
   const auxDataHex = input.auxData ?? input.ad
-  
+
   if (!publicKeyHex) {
     throw new Error('Missing publicKey or pk field in input JSON')
   }
-  
+
   // Handle proof: either direct proof (CLI format) or construct from test vector format
   let proof: Uint8Array
   if (input.proof) {
@@ -242,22 +249,24 @@ export async function verifyIETF(inputPath: string): Promise<void> {
     proof.set(cBytes, 32)
     proof.set(sBytes, 64)
   } else {
-    throw new Error('Missing proof field or (gamma, proof_c, proof_s) fields in input JSON')
+    throw new Error(
+      'Missing proof field or (gamma, proof_c, proof_s) fields in input JSON',
+    )
   }
-  
+
   const publicKey = hexToBytes(publicKeyHex)
   const inputData = hexToBytes(inputHex)
   const auxData = auxDataHex ? hexToBytes(auxDataHex) : undefined
-  
+
   const isValid = IETFVRFVerifier.verify(publicKey, inputData, proof, auxData)
-  
+
   const result = {
     valid: isValid,
     message: isValid ? 'Proof is valid' : 'Proof is invalid',
   }
-  
+
   console.log(JSON.stringify(result, null, 2))
-  
+
   if (!isValid) {
     process.exit(1)
   }
@@ -266,22 +275,25 @@ export async function verifyIETF(inputPath: string): Promise<void> {
 /**
  * Prove Pedersen VRF
  */
-export async function provePedersen(inputPath: string, outputPath?: string): Promise<void> {
+export async function provePedersen(
+  inputPath: string,
+  outputPath?: string,
+): Promise<void> {
   const input = loadJson<PedersenProveInput>(inputPath)
-  
+
   const secretKey = hexToBytes(input.secretKey)
   const pedersenInput: PedersenVRFInput = {
     input: hexToBytes(input.input),
     auxData: input.auxData ? hexToBytes(input.auxData) : undefined,
   }
-  
+
   const result = PedersenVRFProver.prove(secretKey, pedersenInput)
-  
+
   const output: PedersenProveOutput = {
     gamma: bytesToHexString(result.gamma),
     proof: bytesToHexString(result.proof),
   }
-  
+
   if (outputPath) {
     writeJson(outputPath, output)
     console.log(`Proof written to ${outputPath}`)
@@ -295,21 +307,21 @@ export async function provePedersen(inputPath: string, outputPath?: string): Pro
  */
 export async function verifyPedersen(inputPath: string): Promise<void> {
   const input = loadJson<PedersenVerifyInput>(inputPath)
-  
+
   const inputData = hexToBytes(input.input)
   const gamma = hexToBytes(input.gamma)
   const proof = hexToBytes(input.proof)
   const auxData = input.auxData ? hexToBytes(input.auxData) : undefined
-  
+
   const isValid = PedersenVRFVerifier.verify(inputData, gamma, proof, auxData)
-  
+
   const result = {
     valid: isValid,
     message: isValid ? 'Proof is valid' : 'Proof is invalid',
   }
-  
+
   console.log(JSON.stringify(result, null, 2))
-  
+
   if (!isValid) {
     process.exit(1)
   }
@@ -318,21 +330,24 @@ export async function verifyPedersen(inputPath: string): Promise<void> {
 /**
  * Prove Ring VRF
  */
-export async function proveRing(inputPath: string, outputPath?: string): Promise<void> {
+export async function proveRing(
+  inputPath: string,
+  outputPath?: string,
+): Promise<void> {
   const input = loadJson<RingProveInput>(inputPath)
-  
+
   const secretKey = hexToBytes(input.secretKey)
   const ringKeys = input.ringKeys.map(hexToBytes)
-  
+
   const ringInput: RingVRFInput = {
     input: hexToBytes(input.input),
     auxData: input.auxData ? hexToBytes(input.auxData) : undefined,
     ringKeys,
     proverIndex: input.proverIndex,
   }
-  
+
   const useWasm = input.useWasm ?? false
-  
+
   let result
   if (useWasm) {
     const prover = new RingVRFProverWasm(input.srsFilePath)
@@ -342,10 +357,10 @@ export async function proveRing(inputPath: string, outputPath?: string): Promise
     const prover = new RingVRFProver(input.srsFilePath, input.ringKeys.length)
     result = prover.prove(secretKey, ringInput)
   }
-  
+
   // Use RingVRFProver.serialize for both (it's a static method)
   const serialized = RingVRFProver.serialize(result)
-  
+
   const output: RingProveOutput = {
     gamma: bytesToHexString(result.gamma),
     hash: '', // RingVRFResult doesn't have hash property
@@ -357,7 +372,7 @@ export async function proveRing(inputPath: string, outputPath?: string): Promise
     },
     serialized: bytesToHexString(serialized),
   }
-  
+
   if (outputPath) {
     writeJson(outputPath, output)
     console.log(`Proof written to ${outputPath}`)
@@ -371,7 +386,7 @@ export async function proveRing(inputPath: string, outputPath?: string): Promise
  */
 export async function verifyRing(inputPath: string): Promise<void> {
   const input = loadJson<RingVerifyInput>(inputPath)
-  
+
   const ringKeys = input.ringKeys.map(hexToBytes)
   const ringInput: RingVRFInput = {
     input: hexToBytes(input.input),
@@ -380,29 +395,39 @@ export async function verifyRing(inputPath: string): Promise<void> {
     proverIndex: 0, // Not used in verification
   }
   const serializedResult = hexToBytes(input.serializedResult)
-  
+
   // Deserialize the result first
   const deserializedResult = RingVRFProver.deserialize(serializedResult)
-  
+
   const useWasm = input.useWasm ?? false
-  
+
   let isValid: boolean
   if (useWasm) {
     const verifier = new RingVRFVerifierWasm(input.srsFilePath)
     await verifier.init()
-    isValid = verifier.verify(ringKeys, ringInput, deserializedResult, ringInput.auxData)
+    isValid = verifier.verify(
+      ringKeys,
+      ringInput,
+      deserializedResult,
+      ringInput.auxData,
+    )
   } else {
     const verifier = new RingVRFVerifier(input.srsFilePath)
-    isValid = verifier.verify(ringKeys, ringInput, serializedResult, ringInput.auxData)
+    isValid = verifier.verify(
+      ringKeys,
+      ringInput,
+      serializedResult,
+      ringInput.auxData,
+    )
   }
-  
+
   const verificationResult = {
     valid: isValid,
     message: isValid ? 'Proof is valid' : 'Proof is invalid',
   }
-  
+
   console.log(JSON.stringify(verificationResult, null, 2))
-  
+
   if (!isValid) {
     process.exit(1)
   }
@@ -413,7 +438,7 @@ export async function verifyRing(inputPath: string): Promise<void> {
  */
 export async function runCLI(): Promise<void> {
   const args = process.argv.slice(2)
-  
+
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     console.log(`
 Bandersnatch VRF CLI
@@ -456,20 +481,20 @@ Options:
 `)
     process.exit(0)
   }
-  
+
   const command = args[0]
   const scheme = args[1]
-  
+
   if (!command || !scheme) {
     console.error('Error: command and scheme are required')
     console.log('Use --help for usage information')
     process.exit(1)
   }
-  
+
   // Parse options
   let inputPath: string | undefined
   let outputPath: string | undefined
-  
+
   for (let i = 2; i < args.length; i++) {
     if (args[i] === '--input' && i + 1 < args.length) {
       inputPath = args[i + 1]
@@ -479,12 +504,12 @@ Options:
       i++
     }
   }
-  
+
   if (!inputPath) {
     console.error('Error: --input is required')
     process.exit(1)
   }
-  
+
   try {
     if (command === 'prove') {
       if (scheme === 'ietf') {
@@ -513,7 +538,10 @@ Options:
       process.exit(1)
     }
   } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : String(error))
+    console.error(
+      'Error:',
+      error instanceof Error ? error.message : String(error),
+    )
     process.exit(1)
   }
 }
@@ -525,4 +553,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1)
   })
 }
-

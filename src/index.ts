@@ -6,7 +6,6 @@
  */
 
 // CLI exports
-export * from './cli'
 // Re-export from bandersnatch package
 export * from './crypto'
 // Prover exports

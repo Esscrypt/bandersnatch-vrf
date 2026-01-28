@@ -1,0 +1,20 @@
+{
+  "name": "ark-vrf-wasm",
+  "collaborators": [
+    "Davide Galassi <davxy@datawok.net>"
+  ],
+  "description": "WASM bindings for ark-vrf ring proof functionality",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davxy/ark-vrf"
+  },
+  "files": [
+    "ark_vrf_wasm_bg.wasm",
+    "ark_vrf_wasm.js",
+    "ark_vrf_wasm.d.ts"
+  ],
+  "main": "ark_vrf_wasm.js",
+  "types": "ark_vrf_wasm.d.ts"
+}
