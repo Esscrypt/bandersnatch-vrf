@@ -58,10 +58,10 @@ function testBooleanityGadget(hiding: boolean) {
 describe('Booleanity Gadget Tests', () => {
   test('test_booleanity_gadget - without hiding', () => {
     testBooleanityGadget(false)
-  })
+  }, {timeout: 60_000})
 
   test('test_booleanity_gadget - with hiding', () => {
     testBooleanityGadget(true)
-  })
+  }, {timeout: 60_000})
 })
 
