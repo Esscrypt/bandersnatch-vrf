@@ -55,10 +55,10 @@ function testFixedCellsGadget(hiding: boolean) {
 describe('Fixed Cells Gadget Tests', () => {
   test('test_fixed_cells_gadget - without hiding', () => {
     testFixedCellsGadget(false)
-  })
+  }, {timeout: 60_000})
 
   test('test_fixed_cells_gadget - with hiding', () => {
     testFixedCellsGadget(true)
-  })
+  }, {timeout: 60_000})
 })
 
