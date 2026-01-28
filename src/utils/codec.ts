@@ -1,6 +1,12 @@
 /**
  * Local implementation of encodeWorkReport for audit-signature.
+ *
  * Gray Paper Section: Appendix D.1 - Block Serialization (Equation 231-240).
+ * Encoders: encodeNatural (Eq. 30-38), encodeFixedLength (Eq. 102-109),
+ * encodeWorkPackageSpec (Eq. 208-214), encodeRefineContext (Eq. 199-206),
+ * encodeRefineLoad, encodeWorkExecutionResult, encodeWorkResult (Eq. 216-229).
+ *
+ * @module codec
  */
 
 import type {
@@ -16,7 +22,7 @@ import type {
 import { safeError, safeResult } from '@pbnjam/types'
 import { concatBytes, type Hex, hexToBytes } from './core'
 
-// --- encodeNatural (Gray Paper Equation 30-38) ---
+/** @internal Gray Paper Equation 30-38: encode natural number. */
 function encodeNatural(value: bigint): Safe<Uint8Array> {
   if (value < 0n) return safeError(new Error(`Natural number cannot be negative: ${value}`))
   if (value > 2n ** 64n - 1n) return safeError(new Error('Natural number exceeds maximum value'))
@@ -42,7 +48,7 @@ function encodeNatural(value: bigint): Safe<Uint8Array> {
   return safeResult(result)
 }
 
-// --- encodeFixedLength (Gray Paper Equation 102-109) ---
+/** @internal Gray Paper Equation 102-109: fixed-length encoding. */
 function encodeFixedLength(
   value: bigint,
   length: FixedLengthSize,
@@ -56,7 +62,7 @@ function encodeFixedLength(
   return safeResult(result)
 }
 
-// --- encodeWorkPackageSpec (Gray Paper Equation 208-214) ---
+/** @internal Gray Paper Equation 208-214: work package spec encoding. */
 function encodeWorkPackageSpec(spec: WorkPackageSpec): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   parts.push(hexToBytes(spec.hash))
@@ -71,7 +77,7 @@ function encodeWorkPackageSpec(spec: WorkPackageSpec): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-// --- encodeRefineContext (Gray Paper Equation 199-206) ---
+/** @internal Gray Paper Equation 199-206: refine context encoding. */
 function encodeRefineContext(context: RefineContext): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   parts.push(hexToBytes(context.anchor))
@@ -88,7 +94,7 @@ function encodeRefineContext(context: RefineContext): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-// --- encodeRefineLoad ---
+/** @internal Encode refine load (gas_used, imports, extrinsic_count, extrinsic_size, exports). */
 function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   const [e1, g] = encodeNatural(load.gas_used); if (e1) return safeError(e1); parts.push(g)
@@ -99,7 +105,7 @@ function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-// --- encodeWorkExecutionResult ---
+/** @internal Encode work execution result (ok blob, out_of_gas, panic, bad_exports, etc.). */
 function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array> {
   if (typeof result === 'string') {
     if (result.startsWith('0x')) {
@@ -135,7 +141,7 @@ function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array
   return safeError(new Error(`Invalid result type: ${typeof result}`))
 }
 
-// --- encodeWorkResult (Gray Paper Equation 216-229) ---
+/** @internal Gray Paper Equation 216-229: work result encoding. */
 function encodeWorkResult(result: WorkResult): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   const [e1, sid] = encodeFixedLength(result.service_id, 4n); if (e1) return safeError(e1); parts.push(sid)
@@ -150,6 +156,9 @@ function encodeWorkResult(result: WorkResult): Safe<Uint8Array> {
 /**
  * Encode work report according to Gray Paper specification (Equation 231-240).
  * encode(WR) = encode(WR_avspec, WR_context, WR_core, WR_authorizer, WR_authgasused, var{authtrace}, var{srlookup}, var{digests})
+ *
+ * @param report - Work report to encode (package_spec, context, core_index, authorizer_hash, auth_gas_used, auth_output, segment_root_lookup, results)
+ * @returns Safe result with serialized work report bytes
  */
 export function encodeWorkReport(report: WorkReport): Safe<Uint8Array> {
   const parts: Uint8Array[] = []

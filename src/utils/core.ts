@@ -1,6 +1,12 @@
 /**
  * Local implementations of core utilities used by audit-signature, announcement, and tests.
+ *
  * Gray Paper references: utilities.tex (shuffle), crypto (blake2b, Ed25519), JIP-5 key derivation.
+ * Exports: concatBytes, blake2bHash, jamShuffle, signEd25519, verifyEd25519, hex/bytes helpers,
+ * generateTrivialSeed, deriveSecretSeeds, generateEd25519KeyPairFromSeed, generateValidatorKeyPairFromSeed,
+ * generateDevAccountValidatorKeyPair.
+ *
+ * @module core
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
@@ -18,6 +24,12 @@ ed.hashes.sha512 = (...m: Uint8Array[]) =>
 export type { Hex }
 export { bytesToHex, hexToBytes }
 
+/**
+ * Concatenate multiple byte arrays into a single Uint8Array.
+ *
+ * @param bytes - Array of Uint8Array instances to concatenate
+ * @returns A new Uint8Array containing all bytes in order
+ */
 export function concatBytes(bytes: Uint8Array[]): Uint8Array {
   const totalLength = bytes.reduce((acc, curr) => acc + curr.length, 0)
   const result = new Uint8Array(totalLength)
@@ -31,6 +43,9 @@ export function concatBytes(bytes: Uint8Array[]): Uint8Array {
 
 /**
  * Blake2b hash (32-byte output), returns hex string.
+ *
+ * @param data - Input bytes to hash
+ * @returns Safe result with 64-character hex string (with or without 0x prefix from viem)
  */
 export function blake2bHash(data: Uint8Array): Safe<Hex> {
   try {
@@ -89,6 +104,10 @@ function fisherYatesShuffle<T>(sequence: T[], randomSequence: number[]): T[] {
 /**
  * JAM Gray Paper Fisher-Yates Shuffle (Equation 331).
  * Shuffles an array using entropy from a 32-byte hash (Hex).
+ *
+ * @param input - Array to shuffle
+ * @param entropy - 32-byte hash as Hex (64 hex chars, optional 0x prefix)
+ * @returns New array with elements in shuffled order
  */
 export function jamShuffle<T>(input: T[], entropy: Hex): T[] {
   if (input.length === 0) return []
@@ -115,6 +134,10 @@ export function jamShuffle<T>(input: T[], entropy: Hex): T[] {
 
 /**
  * Sign data with Ed25519 private key (32-byte seed).
+ *
+ * @param data - Message bytes to sign
+ * @param privateKey - Ed25519 secret key (32 bytes)
+ * @returns Safe result with 64-byte Ed25519 signature
  */
 export function signEd25519(
   data: Uint8Array,
@@ -132,6 +155,11 @@ export function signEd25519(
 
 /**
  * Verify Ed25519 signature (64 bytes) against data and public key (32 bytes).
+ *
+ * @param data - Message bytes that were signed
+ * @param signature - 64-byte Ed25519 signature
+ * @param publicKey - Ed25519 public key (32 bytes)
+ * @returns Safe result with true if signature is valid
  */
 export function verifyEd25519(
   data: Uint8Array,
@@ -151,6 +179,9 @@ function mod(a: bigint, m: bigint): bigint {
 
 /**
  * Generate trivial seed from 32-bit unsigned integer (JIP-5 dev account).
+ *
+ * @param index - Validator index (0 <= index <= 2^32 - 1)
+ * @returns Safe result with 32-byte seed (little-endian repetition of index)
  */
 export function generateTrivialSeed(index: number): Safe<Uint8Array> {
   if (index < 0 || index > 0xffffffff) {
@@ -168,6 +199,9 @@ export function generateTrivialSeed(index: number): Safe<Uint8Array> {
 
 /**
  * JIP-5: derive Ed25519, Bandersnatch, and BLS secret seeds from 32-byte seed.
+ *
+ * @param seed - Master seed (32 bytes)
+ * @returns Safe result with ed25519SecretSeed, bandersnatchSecretSeed, blsSecretSeed (each 32 bytes as Uint8Array)
  */
 export function deriveSecretSeeds(seed: Uint8Array): Safe<{
   ed25519SecretSeed: Uint8Array
@@ -207,6 +241,9 @@ export function deriveSecretSeeds(seed: Uint8Array): Safe<{
 
 /**
  * Generate Ed25519 key pair from 32-byte seed.
+ *
+ * @param seed - 32-byte secret seed
+ * @returns Safe result with publicKey and privateKey (Uint8Array)
  */
 export function generateEd25519KeyPairFromSeed(
   seed: Uint8Array,
@@ -297,6 +334,9 @@ export function generateValidatorKeyPairFromSeed(
 
 /**
  * Generate dev account validator key pair from validator index (JIP-5 trivial seed).
+ *
+ * @param validatorIndex - Validator index (0 <= index <= 2^32 - 1)
+ * @returns Safe result with ValidatorCredentials
  */
 export function generateDevAccountValidatorKeyPair(
   validatorIndex: number,

@@ -12,6 +12,12 @@ import {
 } from './core'
 
 /**
+ * Audit announcement signature generation and verification (Gray Paper Eq. 82).
+ *
+ * @module announcement
+ */
+
+/**
  * Verify audit announcement signature according to Gray Paper Eq. 82
  *
  * Gray Paper Eq. 82:

@@ -33,6 +33,7 @@
  * 5. VRF output: 32-byte hash for entropy accumulation
  *
  * @fileoverview Entropy VRF signature generation and verification using IETF VRF on Bandersnatch curve
+ * @module entropy-vrf
  */
 
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'

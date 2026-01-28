@@ -1,5 +1,10 @@
 /**
- * Gamma (VRF output point) utility functions
+ * Gamma (VRF output point) utility functions.
+ *
+ * Gray Paper bandersnatch.tex: banderout from VRF output point (gamma).
+ * RFC-9381 Section 5.4.2.3: point-to-hash for VRF output.
+ *
+ * @module gamma
  */
 
 import { pointToHashRfc9381 } from '../crypto/rfc9381'

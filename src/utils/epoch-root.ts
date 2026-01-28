@@ -4,16 +4,14 @@ import { safeError, safeResult } from '@pbnjam/types'
 import { type Hex, hexToBytes } from 'viem'
 
 /**
- * Calculate Bandersnatch ring root from a set of public keys
- * Implements Gray Paper getRingRoot function
+ * Epoch root and ring root utilities for Gray Paper consensus.
  *
- * This creates a commitment to a set of Bandersnatch public keys that can be used
- * for ring VRF proofs. The root allows verification that a proof was created by
- * someone who knows a secret key corresponding to one of the public keys in the ring.
+ * Gray Paper bandersnatch.tex equation 15: getRingRoot{sequence{bskey}} ∈ ringroot.
+ * Gray Paper safrole.tex equation 118: z = getRingRoot({k_vk_bs | k ∈ pendingSet'}).
  *
- * @param bandersnatchKeys - Array of Bandersnatch public keys (32 bytes each)
- * @returns Ring root as 32-byte hash
+ * @module epoch-root
  */
+
 /**
  * getRingRoot - Create KZG polynomial commitment to ring of public keys
  *
