@@ -87,7 +87,9 @@ export class RingVRFVerifierW3F {
 
     const rustVerify = getRustVerifyRingVrf()
     if (rustVerify) {
-      const pedersenProof = PedersenVRFProver.deserialize(result.proof.pedersenProof)
+      const pedersenProof = PedersenVRFProver.deserialize(
+        result.proof.pedersenProof,
+      )
       const keyCommitmentBytes = pedersenProof.Y_bar
       try {
         validateVerifyRingVrfInputs({

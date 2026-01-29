@@ -61,7 +61,9 @@ export interface ProveRingProofInputs {
  * Validate prove_ring_proof inputs (matches Rust lib.rs: srs, ring_keys, blinding_factor, prover_index).
  * Throws if any check fails.
  */
-export function validateProveRingProofInputs(inputs: ProveRingProofInputs): void {
+export function validateProveRingProofInputs(
+  inputs: ProveRingProofInputs,
+): void {
   if (!inputs.srsBytes.length) {
     throw new Error('SRS bytes cannot be empty')
   }
@@ -87,7 +89,9 @@ export function validateProveRingProofInputs(inputs: ProveRingProofInputs): void
  * Serialize proof bytes to output format (moved from Rust lib.rs lines 110-116).
  * Takes raw proof bytes from Rust and returns the final Uint8Array for the caller.
  */
-export function serializeProofToOutput(proofBytes: Buffer | Uint8Array): Uint8Array {
+export function serializeProofToOutput(
+  proofBytes: Buffer | Uint8Array,
+): Uint8Array {
   return new Uint8Array(proofBytes)
 }
 

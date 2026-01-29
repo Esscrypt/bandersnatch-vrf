@@ -1,7 +1,4 @@
-import type {
-  AuditAnnouncement,
-  Safe,
-} from '@pbnjam/types'
+import type { AuditAnnouncement, Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import {
   bytesToHex,
@@ -37,7 +34,6 @@ export function verifyAnnouncementSignature(
   announcement: AuditAnnouncement,
   validatorPublicKey: Uint8Array,
 ): Safe<boolean> {
-
   // Step 3: Construct the message according to Gray Paper Eq. 82:
   // message = Xannounce ∥ n ∥ x_n ∥ blake{H}
   // where:

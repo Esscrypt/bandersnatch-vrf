@@ -24,27 +24,36 @@ import { concatBytes, type Hex, hexToBytes } from './core'
 
 /** @internal Gray Paper Equation 30-38: encode natural number. */
 function encodeNatural(value: bigint): Safe<Uint8Array> {
-  if (value < 0n) return safeError(new Error(`Natural number cannot be negative: ${value}`))
-  if (value > 2n ** 64n - 1n) return safeError(new Error('Natural number exceeds maximum value'))
+  if (value < 0n)
+    return safeError(new Error(`Natural number cannot be negative: ${value}`))
+  if (value > 2n ** 64n - 1n)
+    return safeError(new Error('Natural number exceeds maximum value'))
   if (value === 0n) return safeResult(new Uint8Array([0]))
   if (value >= 2n ** 56n) {
     const result = new Uint8Array(9)
     result[0] = 0xff
-    for (let i = 0; i < 8; i++) result[1 + i] = Number((value >> BigInt(8 * i)) & 0xffn)
+    for (let i = 0; i < 8; i++)
+      result[1 + i] = Number((value >> BigInt(8 * i)) & 0xffn)
     return safeResult(result)
   }
-  if (value >= 1n && value <= 127n) return safeResult(new Uint8Array([Number(value)]))
+  if (value >= 1n && value <= 127n)
+    return safeResult(new Uint8Array([Number(value)]))
   let l = 1
   while (l <= 8 && value >= 1n << BigInt(7 * (l + 1))) l++
-  if (l > 8) return safeError(new Error(`Unable to determine encoding length for value: ${value}`))
+  if (l > 8)
+    return safeError(
+      new Error(`Unable to determine encoding length for value: ${value}`),
+    )
   const prefixBase = (1n << 8n) - (1n << BigInt(8 - l))
   const highBits = value >> BigInt(8 * l)
   const prefix = prefixBase + highBits
-  if (prefix > 255n) return safeError(new Error(`Prefix overflow for value: ${value}, l: ${l}`))
+  if (prefix > 255n)
+    return safeError(new Error(`Prefix overflow for value: ${value}, l: ${l}`))
   const suffix = value & ((1n << BigInt(8 * l)) - 1n)
   const result = new Uint8Array(1 + l)
   result[0] = Number(prefix)
-  for (let i = 0; i < l; i++) result[1 + i] = Number((suffix >> BigInt(8 * i)) & 0xffn)
+  for (let i = 0; i < l; i++)
+    result[1 + i] = Number((suffix >> BigInt(8 * i)) & 0xffn)
   return safeResult(result)
 }
 
@@ -53,12 +62,14 @@ function encodeFixedLength(
   value: bigint,
   length: FixedLengthSize,
 ): Safe<Uint8Array> {
-  if (value < 0n) return safeError(new Error(`Natural number cannot be negative: ${value}`))
+  if (value < 0n)
+    return safeError(new Error(`Natural number cannot be negative: ${value}`))
   const lengthNum = Number(length)
   const modulus = 2n ** (8n * BigInt(lengthNum))
   const wrappedValue = value % modulus
   const result = new Uint8Array(lengthNum)
-  for (let i = 0; i < lengthNum; i++) result[i] = Number((wrappedValue >> (8n * BigInt(i))) & 0xffn)
+  for (let i = 0; i < lengthNum; i++)
+    result[i] = Number((wrappedValue >> (8n * BigInt(i))) & 0xffn)
   return safeResult(result)
 }
 
@@ -71,7 +82,10 @@ function encodeWorkPackageSpec(spec: WorkPackageSpec): Safe<Uint8Array> {
   parts.push(bundleLenEncoded)
   parts.push(hexToBytes(spec.erasure_root))
   parts.push(hexToBytes(spec.exports_root))
-  const [error2, segCountEncoded] = encodeFixedLength(BigInt(spec.exports_count), 2n)
+  const [error2, segCountEncoded] = encodeFixedLength(
+    BigInt(spec.exports_count),
+    2n,
+  )
   if (error2) return safeError(error2)
   parts.push(segCountEncoded)
   return safeResult(concatBytes(parts))
@@ -87,40 +101,63 @@ function encodeRefineContext(context: RefineContext): Safe<Uint8Array> {
   const [error, encoded] = encodeFixedLength(context.lookup_anchor_slot, 4n)
   if (error) return safeError(error)
   parts.push(encoded)
-  const [error2, lengthEncoded] = encodeNatural(BigInt(context.prerequisites.length))
+  const [error2, lengthEncoded] = encodeNatural(
+    BigInt(context.prerequisites.length),
+  )
   if (error2) return safeError(error2)
   parts.push(lengthEncoded)
-  for (const prerequisite of context.prerequisites) parts.push(hexToBytes(prerequisite))
+  for (const prerequisite of context.prerequisites)
+    parts.push(hexToBytes(prerequisite))
   return safeResult(concatBytes(parts))
 }
 
 /** @internal Encode refine load (gas_used, imports, extrinsic_count, extrinsic_size, exports). */
 function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
-  const [e1, g] = encodeNatural(load.gas_used); if (e1) return safeError(e1); parts.push(g)
-  const [e2, i] = encodeNatural(load.imports); if (e2) return safeError(e2); parts.push(i)
-  const [e3, ec] = encodeNatural(load.extrinsic_count); if (e3) return safeError(e3); parts.push(ec)
-  const [e4, es] = encodeNatural(load.extrinsic_size); if (e4) return safeError(e4); parts.push(es)
-  const [e5, ex] = encodeNatural(load.exports); if (e5) return safeError(e5); parts.push(ex)
+  const [e1, g] = encodeNatural(load.gas_used)
+  if (e1) return safeError(e1)
+  parts.push(g)
+  const [e2, i] = encodeNatural(load.imports)
+  if (e2) return safeError(e2)
+  parts.push(i)
+  const [e3, ec] = encodeNatural(load.extrinsic_count)
+  if (e3) return safeError(e3)
+  parts.push(ec)
+  const [e4, es] = encodeNatural(load.extrinsic_size)
+  if (e4) return safeError(e4)
+  parts.push(es)
+  const [e5, ex] = encodeNatural(load.exports)
+  if (e5) return safeError(e5)
+  parts.push(ex)
   return safeResult(concatBytes(parts))
 }
 
 /** @internal Encode work execution result (ok blob, out_of_gas, panic, bad_exports, etc.). */
-function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array> {
+function encodeWorkExecutionResult(
+  result: WorkExecResultValue,
+): Safe<Uint8Array> {
   if (typeof result === 'string') {
     if (result.startsWith('0x')) {
       const resultBytes = hexToBytes(result as Hex)
       const [error, lengthEncoded] = encodeNatural(BigInt(resultBytes.length))
       if (error) return safeError(error)
-      return safeResult(concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]))
+      return safeResult(
+        concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]),
+      )
     }
     switch (result) {
-      case 'out_of_gas': return safeResult(new Uint8Array([1]))
-      case 'bad_exports': return safeResult(new Uint8Array([3]))
-      case 'oversize': return safeResult(new Uint8Array([4]))
-      case 'bad_code': return safeResult(new Uint8Array([5]))
-      case 'code_oversize': return safeResult(new Uint8Array([6]))
-      default: return safeError(new Error(`Unknown error string: ${result}`))
+      case 'out_of_gas':
+        return safeResult(new Uint8Array([1]))
+      case 'bad_exports':
+        return safeResult(new Uint8Array([3]))
+      case 'oversize':
+        return safeResult(new Uint8Array([4]))
+      case 'bad_code':
+        return safeResult(new Uint8Array([5]))
+      case 'code_oversize':
+        return safeResult(new Uint8Array([6]))
+      default:
+        return safeError(new Error(`Unknown error string: ${result}`))
     }
   }
   if (typeof result === 'object' && result !== null) {
@@ -128,7 +165,9 @@ function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array
       const resultBytes = hexToBytes(result.ok)
       const [error, lengthEncoded] = encodeNatural(BigInt(resultBytes.length))
       if (error) return safeError(error)
-      return safeResult(concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]))
+      return safeResult(
+        concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]),
+      )
     }
     if ('panic' in result) return safeResult(new Uint8Array([2]))
     if ('out_of_gas' in result) return safeResult(new Uint8Array([1]))
@@ -136,7 +175,9 @@ function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array
     if ('output_oversize' in result) return safeResult(new Uint8Array([4]))
     if ('bad_code' in result) return safeResult(new Uint8Array([5]))
     if ('code_oversize' in result) return safeResult(new Uint8Array([6]))
-    return safeError(new Error(`Unknown result object: ${JSON.stringify(result)}`))
+    return safeError(
+      new Error(`Unknown result object: ${JSON.stringify(result)}`),
+    )
   }
   return safeError(new Error(`Invalid result type: ${typeof result}`))
 }
@@ -144,12 +185,20 @@ function encodeWorkExecutionResult(result: WorkExecResultValue): Safe<Uint8Array
 /** @internal Gray Paper Equation 216-229: work result encoding. */
 function encodeWorkResult(result: WorkResult): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
-  const [e1, sid] = encodeFixedLength(result.service_id, 4n); if (e1) return safeError(e1); parts.push(sid)
+  const [e1, sid] = encodeFixedLength(result.service_id, 4n)
+  if (e1) return safeError(e1)
+  parts.push(sid)
   parts.push(hexToBytes(result.code_hash))
   parts.push(hexToBytes(result.payload_hash))
-  const [e2, ag] = encodeFixedLength(result.accumulate_gas, 8n); if (e2) return safeError(e2); parts.push(ag)
-  const [e3, res] = encodeWorkExecutionResult(result.result); if (e3) return safeError(e3); parts.push(res)
-  const [e4, rl] = encodeRefineLoad(result.refine_load); if (e4) return safeError(e4); parts.push(rl)
+  const [e2, ag] = encodeFixedLength(result.accumulate_gas, 8n)
+  if (e2) return safeError(e2)
+  parts.push(ag)
+  const [e3, res] = encodeWorkExecutionResult(result.result)
+  if (e3) return safeError(e3)
+  parts.push(res)
+  const [e4, rl] = encodeRefineLoad(result.refine_load)
+  if (e4) return safeError(e4)
+  parts.push(rl)
   return safeResult(concatBytes(parts))
 }
 

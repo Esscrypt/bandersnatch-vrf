@@ -11,15 +11,14 @@
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import * as ed from '@noble/ed25519'
-import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { blake2b } from '@noble/hashes/blake2.js'
 import { sha512 } from '@noble/hashes/sha2.js'
+import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import type { ValidatorCredentials } from '@pbnjam/types'
 import { type Safe, safeError, safeResult } from '@pbnjam/types'
 import { bytesToHex, type Hex, hexToBytes } from 'viem'
 
-ed.hashes.sha512 = (...m: Uint8Array[]) =>
-  sha512(ed.etc.concatBytes(...m))
+ed.hashes.sha512 = (...m: Uint8Array[]) => sha512(ed.etc.concatBytes(...m))
 
 export type { Hex }
 export { bytesToHex, hexToBytes }
@@ -122,10 +121,7 @@ export function jamShuffle<T>(input: T[], entropy: Hex): T[] {
 
   const entropyBytes = new Uint8Array(32)
   for (let i = 0; i < 32; i++) {
-    entropyBytes[i] = Number.parseInt(
-      cleanEntropy.slice(i * 2, i * 2 + 2),
-      16,
-    )
+    entropyBytes[i] = Number.parseInt(cleanEntropy.slice(i * 2, i * 2 + 2), 16)
   }
 
   const randomSequence = computeQSequence(entropyBytes, input.length)
@@ -212,13 +208,17 @@ export function deriveSecretSeeds(seed: Uint8Array): Safe<{
     return safeError(new Error('Seed must be exactly 32 bytes'))
   }
   const ed25519String = new TextEncoder().encode('jam_val_key_ed25519')
-  const bandersnatchString = new TextEncoder().encode('jam_val_key_bandersnatch')
+  const bandersnatchString = new TextEncoder().encode(
+    'jam_val_key_bandersnatch',
+  )
   const blsString = new TextEncoder().encode('jam_val_key_bls')
 
   const ed25519Input = new Uint8Array(ed25519String.length + seed.length)
   ed25519Input.set(ed25519String, 0)
   ed25519Input.set(seed, ed25519String.length)
-  const bandersnatchInput = new Uint8Array(bandersnatchString.length + seed.length)
+  const bandersnatchInput = new Uint8Array(
+    bandersnatchString.length + seed.length,
+  )
   bandersnatchInput.set(bandersnatchString, 0)
   bandersnatchInput.set(seed, bandersnatchString.length)
   const blsInput = new Uint8Array(blsString.length + seed.length)
@@ -280,7 +280,9 @@ function generateBandersnatchKeyPairFromSeed(
     }
     const privateKeyScalar = mod(v, BandersnatchCurve.CURVE_ORDER)
     if (privateKeyScalar === 0n) {
-      return safeError(new Error('Generated scalar is zero, invalid for bandersnatch'))
+      return safeError(
+        new Error('Generated scalar is zero, invalid for bandersnatch'),
+      )
     }
     const publicKeyPoint = BandersnatchCurve.scalarMultiply(
       BandersnatchCurve.GENERATOR,
@@ -312,10 +314,14 @@ export function generateValidatorKeyPairFromSeed(
   const [error, secretSeeds] = deriveSecretSeeds(seed)
   if (error) return safeError(error)
 
-  const [ed25519Error, ed25519KeyPair] = generateEd25519KeyPairFromSeed(secretSeeds.ed25519SecretSeed)
+  const [ed25519Error, ed25519KeyPair] = generateEd25519KeyPairFromSeed(
+    secretSeeds.ed25519SecretSeed,
+  )
   if (ed25519Error) return safeError(ed25519Error)
 
-  const [blsError, blsKeyPair] = generateBLSKeyPairFromSeed(secretSeeds.blsSecretSeed)
+  const [blsError, blsKeyPair] = generateBLSKeyPairFromSeed(
+    secretSeeds.blsSecretSeed,
+  )
   if (blsError) return safeError(blsError)
 
   const [bandersnatchError, bandersnatchKeyPair] =

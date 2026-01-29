@@ -1,7 +1,7 @@
-import type { RingVRFProverW3F, RingVRFProverWasm } from '../prover'
 import type { Safe, ValidatorPublicKeys } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { type Hex, hexToBytes } from 'viem'
+import type { RingVRFProverW3F, RingVRFProverWasm } from '../prover'
 
 /**
  * Epoch root and ring root utilities for Gray Paper consensus.

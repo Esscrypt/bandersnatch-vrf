@@ -48,13 +48,6 @@ import {
   IETFVRFProver,
   IETFVRFVerifier,
 } from '@pbnjam/bandersnatch-vrf'
-import { encodeWorkReport } from './codec'
-import {
-  blake2bHash,
-  type Hex,
-  hexToBytes,
-  jamShuffle,
-} from './core'
 import type {
   AuditAnnouncement,
   IConfigService,
@@ -62,6 +55,8 @@ import type {
   WorkReport,
 } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
+import { encodeWorkReport } from './codec'
+import { blake2bHash, type Hex, hexToBytes, jamShuffle } from './core'
 
 /**
  * Gray Paper hardcoded context string for audit VRF
