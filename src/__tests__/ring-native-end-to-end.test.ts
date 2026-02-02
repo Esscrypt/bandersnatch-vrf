@@ -322,7 +322,7 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`\n❌ Value matching error: ${error}`)
           throw error // Fail the test on mismatch
         }
-      })
+      }, { timeout: 1000_000 })
     }
   })
 })

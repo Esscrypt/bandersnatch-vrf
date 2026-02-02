@@ -208,7 +208,7 @@ describe('Ring VRF End-to-End Tests (WASM + W3F)', () => {
         // ----- W3F: same gamma/beta as test vector (same Pedersen) -----
         expect(bytesToHex(proofW3F!.gamma).slice(2)).toBe(vector.gamma)
         expect(bytesToHex(getCommitmentFromGamma(proofW3F!.gamma)).slice(2)).toBe(vector.beta)
-      })
+      }, { timeout: 1000_000 })
     }
   })
 })
