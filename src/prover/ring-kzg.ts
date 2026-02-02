@@ -737,27 +737,8 @@ export class RingVRFProver {
     const scalarBitlen = 253 // Bandersnatch scalar field bit length
     const keysetPartSize = domainSize - scalarBitlen - 1 // domain.capacity - scalar_bitlen - 1
 
-    // #region agent log
-    console.log('[computeRingCommitment] Start:', {
-      domainSize,
-      scalarBitlen,
-      keysetPartSize,
-      ringKeysLength: ringKeys.length,
-      lagrangianSRSSize: this.lagrangianSRS.length,
-    })
-    // #endregion
-
     // Reuse shared coordinate extraction logic
     const { xs, ys } = extractRingCoordinateVectors(ringKeys)
-
-    // #region agent log
-    console.log('[computeRingCommitment] Extracted coordinates:', {
-      xsLength: xs.length,
-      ysLength: ys.length,
-      xsFirst3: xs.slice(0, 3).map((x) => x.toString(16)),
-      ysFirst3: ys.slice(0, 3).map((y) => y.toString(16)),
-    })
-    // #endregion
 
     // Compute MSM for cx and cy using Lagrangian SRS
     // This matches Rust implementation: srs.lis_in_g1 (Lagrangian SRS)
@@ -850,16 +831,6 @@ export class RingVRFProver {
       )
     }
 
-    // #region agent log
-    console.log('[computeRingCommitment] SRS bases structure:', {
-      vectorLength,
-      keysSrsLength,
-      powersOfHSrsStart,
-      deserializedBasesLength: deserializedBases.length,
-      lagrangianSRSSize: this.lagrangianSRS.length,
-    })
-    // #endregion
-
     // Prepare scalars for MSM
     // Note: xs and ys are already reduced modulo BLS12_381_SCALAR_FIELD_ORDER
     // (same as BANDERSNATCH_PARAMS.FIELD_MODULUS) in extractRingCoordinateVectors,
@@ -876,28 +847,8 @@ export class RingVRFProver {
     // - Constant-time for same input size
     const cx = pippenger(bls12_381.G1.Point, deserializedBases, xsScalars)
 
-    // #region agent log
-    const cxBytes = cx.toBytes(true)
-    const cxHex = Array.from(cxBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-    console.log('[computeRingCommitment] Computed cx:', {
-      cxHex: `${cxHex.slice(0, 64)}...`,
-    })
-    // #endregion
-
     // Compute cy = MSM(bases, ys) using Pippenger's algorithm
     const cy = pippenger(bls12_381.G1.Point, deserializedBases, ysScalars)
-
-    // #region agent log
-    const cyBytes = cy.toBytes(true)
-    const cyHex = Array.from(cyBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-    console.log('[computeRingCommitment] Computed cy:', {
-      cyHex: `${cyHex.slice(0, 64)}...`,
-    })
-    // #endregion
 
     // Compute selector = g1 - sum(lagrangianSRS[keyset_part_size..])
     // Rust: selector_inv = srs.lis_in_g1[piop_params.keyset_part_size..].iter().sum()
@@ -917,35 +868,11 @@ export class RingVRFProver {
     )
     const selector = g1Point.subtract(selectorInv)
 
-    // #region agent log
-    const selectorBytes = selector.toBytes(true)
-    const selectorHex = Array.from(selectorBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-    console.log('[computeRingCommitment] Computed selector:', {
-      selectorHex: `${selectorHex.slice(0, 64)}...`,
-      selectorPointsLength: selectorPoints.length,
-      powersOfHSrsStart,
-    })
-    // #endregion
-
     // Return FixedColumnsCommitted: [cx (48), cy (48), selector (48)] = 144 bytes
     const result = new Uint8Array(144)
     result.set(cx.toBytes(true), 0)
     result.set(cy.toBytes(true), 48)
     result.set(selector.toBytes(true), 96)
-
-    // #region agent log
-    const resultHex = Array.from(result)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-    console.log('[computeRingCommitment] Final result:', {
-      resultHex: `${resultHex.slice(0, 128)}...`,
-      cxHex: resultHex.slice(0, 96),
-      cyHex: resultHex.slice(96, 192),
-      selectorHex: resultHex.slice(192, 288),
-    })
-    // #endregion
 
     return result
   }

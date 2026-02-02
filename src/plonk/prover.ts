@@ -147,29 +147,6 @@ export class PlonkProver {
     const columnsAtZeta = piop.columnsEvaluated(zeta)
     const constraintPolysLinearized = piop.constraintsLinearized(zeta)
 
-    // #region agent log
-    fetch(
-      'http://127.0.0.1:10000/ingest/3fca1dc3-0561-4f6b-af77-e67afc81f2d7',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'prover.ts:140',
-          message: 'Before aggregatePolynomials',
-          data: {
-            constraintPolysLinearizedLength: constraintPolysLinearized.length,
-            alphasLength: alphas.length,
-            nConstraints,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'H',
-        }),
-      },
-    ).catch(() => {})
-    // #endregion
-
     // Aggregate linearized constraint polynomials
     const lin = this.aggregatePolynomials(constraintPolysLinearized, alphas)
 

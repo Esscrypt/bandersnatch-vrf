@@ -370,8 +370,10 @@ describe('IETF VRF End-to-End Tests', () => {
         ...sFromProof,
       ])
       
-      // Verify round-trip
-      expect(reserializedProof).toEqual(proofResult.proof)
+      // Verify round-trip (compare as arrays to avoid ArrayBuffer vs ArrayBufferLike)
+      expect(Array.from(reserializedProof)).toEqual(
+        Array.from(proofResult.proof),
+      )
       expect(reserializedProof.length).toBe(96)
       
       // Verify the re-serialized proof still verifies
@@ -419,10 +421,12 @@ describe('IETF VRF End-to-End Tests', () => {
         ...sFromProof,
       ])
       
-      // Verify round-trip
+      // Verify round-trip (compare as arrays to avoid ArrayBuffer vs ArrayBufferLike)
       expect(reserializedProof.length).toBe(96)
-      expect(reserializedProof).toEqual(proofResult.proof)
-      
+      expect(Array.from(reserializedProof)).toEqual(
+        Array.from(proofResult.proof),
+      )
+
       // Verify the re-serialized proof still verifies
       const publicKey = hexToBytes(vector.pk)
       const isValid = IETFVRFVerifier.verify(
