@@ -18,7 +18,7 @@
     "build:native:debug": "cd rust-ring-proof && bun run build:debug",
     "build:ts": "tsc",
     "build:bin": "bun build ./src/cli.ts --compile --outfile ./bin/bandersnatch-vrf --sourcemap --minify-whitespace --minify-syntax --target bun ",
-    "test": "bun test src/__tests__/ring-end-to-end.test.ts",
+    "test": "bun run build && bun test src/__tests__/ring-end-to-end.test.ts",
     "prepare": "bun run build:native || echo 'Native build failed, continuing without native module'",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
