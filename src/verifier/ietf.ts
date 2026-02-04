@@ -11,9 +11,7 @@ import {
 } from '@pbnjam/bandersnatch'
 import { bytesToHex, hexToBytes } from 'viem'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import {
-  bytesToBigIntLittleEndian,
-} from '../crypto/elligator2'
+import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'
 import { IETFVRFProver } from '../prover/ietf'
 

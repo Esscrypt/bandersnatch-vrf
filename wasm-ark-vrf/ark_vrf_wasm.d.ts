@@ -12,7 +12,11 @@
  * # Returns
  * * Serialized FixedColumnsCommitted (144 bytes: cx, cy, selector, each 48 bytes)
  */
-export function compute_ring_commitment(srs_bytes: Uint8Array, ring_keys_bytes: Uint8Array, ring_size: number): Uint8Array;
+export function compute_ring_commitment(
+  srs_bytes: Uint8Array,
+  ring_keys_bytes: Uint8Array,
+  ring_size: number,
+): Uint8Array
 /**
  * Verify an IETF VRF proof using ark-vrf (RFC-9381).
  *
@@ -26,7 +30,13 @@ export function compute_ring_commitment(srs_bytes: Uint8Array, ring_keys_bytes: 
  * # Returns
  * * `true` if proof is valid, `false` otherwise
  */
-export function verify_ietf_vrf(public_key_bytes: Uint8Array, input_point_bytes: Uint8Array, output_point_bytes: Uint8Array, proof_bytes: Uint8Array, aux_data: Uint8Array): boolean;
+export function verify_ietf_vrf(
+  public_key_bytes: Uint8Array,
+  input_point_bytes: Uint8Array,
+  output_point_bytes: Uint8Array,
+  proof_bytes: Uint8Array,
+  aux_data: Uint8Array,
+): boolean
 /**
  * Generate a ring proof using ark-vrf (matches test vectors exactly).
  *
@@ -43,8 +53,14 @@ export function verify_ietf_vrf(public_key_bytes: Uint8Array, input_point_bytes:
  * # Returns
  * * Serialized RingProof (matches test vectors exactly)
  */
-export function prove_ring_proof(srs_bytes: Uint8Array, ring_keys_bytes: Uint8Array, blinding_factor_bytes: Uint8Array, prover_index: number, ring_size: number): Uint8Array;
-export function init(): void;
+export function prove_ring_proof(
+  srs_bytes: Uint8Array,
+  ring_keys_bytes: Uint8Array,
+  blinding_factor_bytes: Uint8Array,
+  prover_index: number,
+  ring_size: number,
+): Uint8Array
+export function init(): void
 /**
  * Verify a ring proof using ark-vrf.
  *
@@ -58,4 +74,10 @@ export function init(): void;
  * # Returns
  * * `true` if proof is valid, `false` otherwise
  */
-export function verify_ring_proof(srs_bytes: Uint8Array, proof_bytes: Uint8Array, ring_keys_bytes: Uint8Array, key_commitment_bytes: Uint8Array, ring_size: number): boolean;
+export function verify_ring_proof(
+  srs_bytes: Uint8Array,
+  proof_bytes: Uint8Array,
+  ring_keys_bytes: Uint8Array,
+  key_commitment_bytes: Uint8Array,
+  ring_size: number,
+): boolean

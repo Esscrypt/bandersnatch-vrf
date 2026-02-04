@@ -46,13 +46,7 @@ export class IETFVRFVerifierWasm {
     const proofCS = proof.subarray(GAMMA_LEN, GAMMA_LEN + PROOF_CS_LEN)
     const aux = auxData ?? new Uint8Array(0)
     try {
-      return verify_ietf_vrf(
-        publicKey,
-        alpha,
-        gammaFromProof,
-        proofCS,
-        aux,
-      )
+      return verify_ietf_vrf(publicKey, alpha, gammaFromProof, proofCS, aux)
     } catch {
       return false
     }
