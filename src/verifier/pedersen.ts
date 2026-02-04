@@ -65,8 +65,6 @@ export class PedersenVRFVerifier {
 
     if (!isValid) {
       console.error('Pedersen VRF proof verification failed', {})
-    } else {
-      console.debug('Pedersen VRF proof verified successfully', {})
     }
 
     return isValid
@@ -161,13 +159,6 @@ export class PedersenVRFVerifier {
 
       // Step 5: Final result
       const isValid = theta0 && theta1
-
-      console.debug('Pedersen VRF verification details', {
-        theta0,
-        theta1,
-        isValid,
-        challenge: c.toString(16),
-      })
 
       return isValid
     } catch (error) {

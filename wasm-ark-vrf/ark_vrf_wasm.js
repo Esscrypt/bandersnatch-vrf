@@ -87,10 +87,6 @@ function getDataViewMemory0() {
     return cachedDataViewMemory0;
 }
 
-exports.init = function() {
-    wasm.init();
-};
-
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
     getUint8ArrayMemory0().set(arg, ptr / 1);
@@ -103,40 +99,6 @@ function takeFromExternrefTable0(idx) {
     wasm.__externref_table_dealloc(idx);
     return value;
 }
-/**
- * Verify a ring proof using ark-vrf.
- *
- * # Arguments
- * * `srs_bytes` - Serialized PCS params (SRS) bytes (uncompressed arkworks format)
- * * `proof_bytes` - Serialized RingProof
- * * `ring_keys_bytes` - Serialized ring public keys (compressed, 32 bytes each)
- * * `key_commitment_bytes` - Serialized key commitment (Y_bar from Pedersen proof, compressed, 32 bytes)
- * * `ring_size` - Number of keys in the ring
- *
- * # Returns
- * * `true` if proof is valid, `false` otherwise
- * @param {Uint8Array} srs_bytes
- * @param {Uint8Array} proof_bytes
- * @param {Uint8Array} ring_keys_bytes
- * @param {Uint8Array} key_commitment_bytes
- * @param {number} ring_size
- * @returns {boolean}
- */
-exports.verify_ring_proof = function(srs_bytes, proof_bytes, ring_keys_bytes, key_commitment_bytes, ring_size) {
-    const ptr0 = passArray8ToWasm0(srs_bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(proof_bytes, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(ring_keys_bytes, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ptr3 = passArray8ToWasm0(key_commitment_bytes, wasm.__wbindgen_malloc);
-    const len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verify_ring_proof(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ring_size);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] !== 0;
-};
 
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
@@ -170,6 +132,43 @@ exports.compute_ring_commitment = function(srs_bytes, ring_keys_bytes, ring_size
     var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v3;
+};
+
+/**
+ * Verify an IETF VRF proof using ark-vrf (RFC-9381).
+ *
+ * # Arguments
+ * * `public_key_bytes` - Public key point (32 bytes, compressed)
+ * * `input_point_bytes` - VRF input point alpha / H (32 bytes, compressed)
+ * * `output_point_bytes` - VRF output point gamma (32 bytes, compressed)
+ * * `proof_bytes` - IETF proof (64 bytes: c || s, both little-endian)
+ * * `aux_data` - Additional data bound to the proof
+ *
+ * # Returns
+ * * `true` if proof is valid, `false` otherwise
+ * @param {Uint8Array} public_key_bytes
+ * @param {Uint8Array} input_point_bytes
+ * @param {Uint8Array} output_point_bytes
+ * @param {Uint8Array} proof_bytes
+ * @param {Uint8Array} aux_data
+ * @returns {boolean}
+ */
+exports.verify_ietf_vrf = function(public_key_bytes, input_point_bytes, output_point_bytes, proof_bytes, aux_data) {
+    const ptr0 = passArray8ToWasm0(public_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(input_point_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(output_point_bytes, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ptr3 = passArray8ToWasm0(proof_bytes, wasm.__wbindgen_malloc);
+    const len3 = WASM_VECTOR_LEN;
+    const ptr4 = passArray8ToWasm0(aux_data, wasm.__wbindgen_malloc);
+    const len4 = WASM_VECTOR_LEN;
+    const ret = wasm.verify_ietf_vrf(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
 };
 
 /**
@@ -208,6 +207,45 @@ exports.prove_ring_proof = function(srs_bytes, ring_keys_bytes, blinding_factor_
     var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v4;
+};
+
+exports.init = function() {
+    wasm.init();
+};
+
+/**
+ * Verify a ring proof using ark-vrf.
+ *
+ * # Arguments
+ * * `srs_bytes` - Serialized PCS params (SRS) bytes (uncompressed arkworks format)
+ * * `proof_bytes` - Serialized RingProof
+ * * `ring_keys_bytes` - Serialized ring public keys (compressed, 32 bytes each)
+ * * `key_commitment_bytes` - Serialized key commitment (Y_bar from Pedersen proof, compressed, 32 bytes)
+ * * `ring_size` - Number of keys in the ring
+ *
+ * # Returns
+ * * `true` if proof is valid, `false` otherwise
+ * @param {Uint8Array} srs_bytes
+ * @param {Uint8Array} proof_bytes
+ * @param {Uint8Array} ring_keys_bytes
+ * @param {Uint8Array} key_commitment_bytes
+ * @param {number} ring_size
+ * @returns {boolean}
+ */
+exports.verify_ring_proof = function(srs_bytes, proof_bytes, ring_keys_bytes, key_commitment_bytes, ring_size) {
+    const ptr0 = passArray8ToWasm0(srs_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(proof_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(ring_keys_bytes, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ptr3 = passArray8ToWasm0(key_commitment_bytes, wasm.__wbindgen_malloc);
+    const len3 = WASM_VECTOR_LEN;
+    const ret = wasm.verify_ring_proof(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ring_size);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
 };
 
 exports.__wbg___wbindgen_throw_b855445ff6a94295 = function(arg0, arg1) {

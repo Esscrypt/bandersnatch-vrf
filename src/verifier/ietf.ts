@@ -11,7 +11,9 @@ import {
 } from '@pbnjam/bandersnatch'
 import { bytesToHex, hexToBytes } from 'viem'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
+import {
+  bytesToBigIntLittleEndian,
+} from '../crypto/elligator2'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381'
 import { IETFVRFProver } from '../prover/ietf'
 
@@ -21,17 +23,24 @@ import { IETFVRFProver } from '../prover/ietf'
  */
 export class IETFVRFVerifier {
   /**
-   * Check if bytes are all zero, and if so, return padding point bytes
-   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
+   * Replace invalid point bytes with the padding point.
+   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys.
+   * Treats as invalid: all-zero bytes, wrong length, or bytes that do not decode to a valid curve point.
    */
-  private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
-    // Check if all bytes are zero
+  private static usePaddingPointIfInvalid(bytes: Uint8Array): Uint8Array {
     const isAllZero = bytes.every((byte) => byte === 0)
     if (isAllZero) {
-      // Return padding point bytes instead
       return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
     }
-    return bytes
+    if (bytes.length !== 32) {
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
+    try {
+      BandersnatchCurve.bytesToPoint(bytes, true)
+      return bytes
+    } catch {
+      return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
+    }
   }
   /**
    * Verify VRF proof
@@ -104,9 +113,9 @@ export class IETFVRFVerifier {
 
     // Convert inputs to curve points
     // Check for all-zero bytes and use padding point if needed
-    const alphaBytes = this.usePaddingPointIfZero(alpha)
-    const gammaBytes = this.usePaddingPointIfZero(gammaFromProof)
-    const publicKeyBytes = this.usePaddingPointIfZero(publicKey)
+    const alphaBytes = this.usePaddingPointIfInvalid(alpha)
+    const gammaBytes = this.usePaddingPointIfInvalid(gammaFromProof)
+    const publicKeyBytes = this.usePaddingPointIfInvalid(publicKey)
     const alphaPoint = BandersnatchCurve.bytesToPoint(alphaBytes)
     const gammaPoint = BandersnatchCurve.bytesToPoint(gammaBytes) // Use gamma from proof
     const publicKeyPoint = BandersnatchCurve.bytesToPoint(publicKeyBytes) // Y = public key point

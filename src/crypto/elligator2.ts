@@ -54,6 +54,18 @@ export function bytesToBigIntLittleEndian(bytes: Uint8Array): bigint {
 }
 
 /**
+ * Parse 32-byte scalar as big-endian (MSB first).
+ * Conformance / some RFC-9381 implementations encode proof scalars c,s in big-endian.
+ */
+export function bytesToBigIntBigEndian(bytes: Uint8Array): bigint {
+  let result = 0n
+  for (let i = 0; i < bytes.length; i++) {
+    result = (result << 8n) | BigInt(bytes[i])
+  }
+  return result
+}
+
+/**
  * Noble Edwards curve instance for Bandersnatch
  * Used for native Noble operations with arkworks compatibility
  */
