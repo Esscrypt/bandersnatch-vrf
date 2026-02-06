@@ -15,6 +15,9 @@ import {
 import { type Hex, generateDevAccountValidatorKeyPair } from '../utils/core'
 import type { WorkReport, AuditAnnouncement, IValidatorSetManager, ValidatorKeyTuple } from '@pbnjam/types'
 import { generateAnnouncementSignature, verifyAnnouncementSignature } from '../utils/announcement'
+import { IETFVRFVerifier, IETFVRFVerifierWasm } from '@pbnjam/bandersnatch-vrf'
+
+const verifier: IETFVRFVerifier | IETFVRFVerifierWasm = new IETFVRFVerifierWasm()
 
 describe('Audit Signature Functions', () => {
   const blockHeaderVrfOutput = new Uint8Array(32).fill(3)
@@ -150,6 +153,7 @@ describe('Audit Signature Functions', () => {
         aliceKeyPair.bandersnatchKeyPair.publicKey,
         gen0Result!.signature,
         blockHeaderVrfOutput,
+        verifier,
       )
       expect(verify0Error).toBeUndefined()
       expect(verify0Valid).toBe(true)
@@ -170,6 +174,7 @@ describe('Audit Signature Functions', () => {
         blockHeaderVrfOutput,
         mockWorkReport,
         trancheNumber,
+        verifier,
       )
       expect(verifyNError).toBeUndefined()
       expect(verifyNValid).toBe(true)

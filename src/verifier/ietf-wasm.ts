@@ -28,7 +28,7 @@ export class IETFVRFVerifierWasm {
    * @param auxData - Additional data (optional)
    * @returns true if proof is valid
    */
-  static verify(
+  verify(
     publicKey: Uint8Array,
     input: Uint8Array,
     proof: Uint8Array,

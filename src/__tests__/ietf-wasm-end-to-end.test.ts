@@ -9,7 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { IETFVRFProver } from '../prover/ietf'
-import { IETFVRFVerifier } from '../verifier/ietf'
+import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm'
 import { bytesToHex } from 'viem'
 import { getCommitmentFromGamma } from '../utils/gamma'
 import {
@@ -41,6 +41,8 @@ const IETF_TEST_VECTORS = JSON.parse(
   proof_s: string
 }>
 
+const verifier = new IETFVRFVerifierWasm()
+
 // Hex parsing function that handles missing leading zeros
 function hexToBytes(hex: string): Uint8Array {
   // Remove 0x prefix if present
@@ -59,8 +61,6 @@ function hexToBytes(hex: string): Uint8Array {
   }
   return bytes
 }
-
-const verifier = new IETFVRFVerifier()
 
 describe('IETF VRF End-to-End Tests', () => {
   describe('Proof Generation and Verification', () => {

@@ -40,7 +40,8 @@ import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import {
   getBanderoutFromGamma,
   IETFVRFProver,
-  IETFVRFVerifier,
+  type IETFVRFVerifier,
+  type IETFVRFVerifierWasm,
   pointToHashRfc9381,
 } from '@pbnjam/bandersnatch-vrf'
 import type { Safe } from '@pbnjam/types'
@@ -143,6 +144,7 @@ export function verifyEntropyVRFSignature(
   validatorPublicKey: Uint8Array,
   signature: Uint8Array,
   sealOutput: Uint8Array,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Safe<boolean> {
   // Validate inputs
   if (validatorPublicKey.length !== 32) {
@@ -170,10 +172,9 @@ export function verifyEntropyVRFSignature(
   // k = validatorPublicKey, c = context, m = [] (empty message)
   // NOTE: When m = [] (empty), the context c becomes the input (hashed to curve point)
   // This matches the pattern used in audit signatures (bssignature{k}{c}{[]})
-  // IETFVRFVerifier.verify parameter order is (publicKey, input, proof, auxData)
   let isValid: boolean
   try {
-    isValid = IETFVRFVerifier.verify(
+    isValid = verifier.verify(
       validatorPublicKey,
       context, // Xentropy ∥ banderout{H_sealsig} (context) - becomes input when m = []
       signature,

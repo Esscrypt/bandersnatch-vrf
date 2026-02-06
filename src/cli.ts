@@ -11,7 +11,8 @@ import { IETFVRFProver, type IETFVRFResult } from './prover/ietf'
 import { type PedersenVRFInput, PedersenVRFProver } from './prover/pedersen'
 import { type RingVRFInput, RingVRFProver } from './prover/ring-kzg'
 import { RingVRFProverWasm } from './prover/ring-kzg-wasm'
-import { IETFVRFVerifier } from './verifier/ietf'
+import type { IETFVRFVerifier } from './verifier/ietf'
+import { IETFVRFVerifierWasm } from './verifier/ietf-wasm'
 import { PedersenVRFVerifier } from './verifier/pedersen'
 import { RingVRFVerifier } from './verifier/ring'
 import { RingVRFVerifierWasm } from './verifier/ring-wasm'
@@ -222,7 +223,10 @@ export async function proveIETF(
 /**
  * Verify IETF VRF
  */
-export async function verifyIETF(inputPath: string): Promise<void> {
+export async function verifyIETF(
+  inputPath: string,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
+): Promise<void> {
   const input = loadJson<IETFVerifyInput>(inputPath)
 
   // Support both CLI format and test vector format
@@ -258,7 +262,7 @@ export async function verifyIETF(inputPath: string): Promise<void> {
   const inputData = hexToBytes(inputHex)
   const auxData = auxDataHex ? hexToBytes(auxDataHex) : undefined
 
-  const isValid = IETFVRFVerifier.verify(publicKey, inputData, proof, auxData)
+  const isValid = verifier.verify(publicKey, inputData, proof, auxData)
 
   const result = {
     valid: isValid,
@@ -510,6 +514,9 @@ Options:
     process.exit(1)
   }
 
+  const verifier: IETFVRFVerifier | IETFVRFVerifierWasm =
+    new IETFVRFVerifierWasm()
+
   try {
     if (command === 'prove') {
       if (scheme === 'ietf') {
@@ -524,7 +531,7 @@ Options:
       }
     } else if (command === 'verify') {
       if (scheme === 'ietf') {
-        await verifyIETF(inputPath)
+        await verifyIETF(inputPath, verifier)
       } else if (scheme === 'pedersen') {
         await verifyPedersen(inputPath)
       } else if (scheme === 'ring') {

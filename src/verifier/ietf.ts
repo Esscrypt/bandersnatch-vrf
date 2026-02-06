@@ -25,7 +25,7 @@ export class IETFVRFVerifier {
    * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys.
    * Treats as invalid: all-zero bytes, wrong length, or bytes that do not decode to a valid curve point.
    */
-  private static usePaddingPointIfInvalid(bytes: Uint8Array): Uint8Array {
+  private usePaddingPointIfInvalid(bytes: Uint8Array): Uint8Array {
     const isAllZero = bytes.every((byte) => byte === 0)
     if (isAllZero) {
       return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
@@ -49,7 +49,7 @@ export class IETFVRFVerifier {
    * @param auxData - Additional data (optional)
    * @returns true if proof is valid, false otherwise
    */
-  static verify(
+  verify(
     publicKey: Uint8Array,
     input: Uint8Array,
     proof: Uint8Array,
@@ -81,7 +81,7 @@ export class IETFVRFVerifier {
    * @param auxData - Additional data (optional)
    * @returns true if proof is valid, false otherwise
    */
-  private static verifyProof(
+  private verifyProof(
     publicKey: Uint8Array,
     alpha: Uint8Array,
     proof: Uint8Array,
@@ -179,7 +179,7 @@ export class IETFVRFVerifier {
    * Hash to scalar for challenge verification
    * Implements the challenge generation per IETF RFC-9381
    */
-  private static hashToScalar(
+  private hashToScalar(
     points: Uint8Array[],
     auxData: Uint8Array = new Uint8Array(0),
   ): bigint {

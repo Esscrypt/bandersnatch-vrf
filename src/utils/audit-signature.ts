@@ -46,7 +46,8 @@
 import {
   getBanderoutFromGamma,
   IETFVRFProver,
-  IETFVRFVerifier,
+  type IETFVRFVerifier,
+  type IETFVRFVerifierWasm,
 } from '@pbnjam/bandersnatch-vrf'
 import type {
   AuditAnnouncement,
@@ -234,6 +235,7 @@ export function verifyTranche0AuditSignature(
   validatorPublicKey: Uint8Array,
   signature: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Safe<boolean> {
   // Validate inputs
   if (validatorPublicKey.length !== 32) {
@@ -259,7 +261,7 @@ export function verifyTranche0AuditSignature(
   // Verify IETF VRF signature using IETFVRFVerifier
   // Gray Paper equations 54-62: bssignature{k}{c}{m} where:
   // k = validatorPublicKey, c = context, m = [] (empty message)
-  const isValid = IETFVRFVerifier.verify(
+  const isValid = verifier.verify(
     validatorPublicKey,
     context, // Xaudit ∥ banderout{H_vrfsig} (input)
     signature,
@@ -285,6 +287,7 @@ export function verifyTrancheNAuditSignature(
   blockHeaderVrfOutput: Uint8Array,
   workReport: WorkReport,
   trancheNumber: bigint,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Safe<boolean> {
   // Validate inputs
   if (validatorPublicKey.length !== 32) {
@@ -343,7 +346,7 @@ export function verifyTrancheNAuditSignature(
   // Verify IETF VRF signature using IETFVRFVerifier
   // Gray Paper equation 105: bssignature{k}{c}{m} where:
   // k = validatorPublicKey, c = context, m = [] (empty message)
-  const isValid = IETFVRFVerifier.verify(
+  const isValid = verifier.verify(
     validatorPublicKey,
     context, // Xaudit ∥ banderout{H_vrfsig} ∥ blake{w} ∥ n (input)
     signature,
@@ -407,6 +410,7 @@ export function verifyAuditSignature(
   signature: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
   trancheNumber: bigint,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
   workReport?: WorkReport,
 ): Safe<boolean> {
   if (trancheNumber === 0n) {
@@ -415,6 +419,7 @@ export function verifyAuditSignature(
       validatorPublicKey,
       signature,
       blockHeaderVrfOutput,
+      verifier,
     )
   } else {
     // Use tranche N logic
@@ -427,6 +432,7 @@ export function verifyAuditSignature(
       blockHeaderVrfOutput,
       workReport,
       trancheNumber,
+      verifier,
     )
   }
 }
@@ -444,6 +450,7 @@ export function verifyBandersnatchVRFEvidence(
   announcement: AuditAnnouncement,
   announcerBandersnatchPublicKey: Uint8Array,
   workReport: WorkReport,
+  verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Safe<boolean> {
   // TODO: Extract banderout{H_vrfsig} from block header
   // This should come from the block header's VRF signature
@@ -455,6 +462,7 @@ export function verifyBandersnatchVRFEvidence(
       announcerBandersnatchPublicKey,
       announcement.evidence,
       blockHeaderVrfOutput,
+      verifier,
     )
 
     if (error) {
@@ -472,6 +480,7 @@ export function verifyBandersnatchVRFEvidence(
       blockHeaderVrfOutput,
       workReport,
       announcement.tranche,
+      verifier,
     )
 
     if (error) {
