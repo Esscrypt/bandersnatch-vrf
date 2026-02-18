@@ -130,13 +130,6 @@ export class PedersenVRFProver {
     secretKey: Uint8Array,
     input: PedersenVRFInput,
   ): PedersenVRFResult {
-    const startTime = Date.now()
-
-    console.debug('Generating Pedersen VRF proof', {
-      inputLength: input.input.length,
-      hasAuxData: !!input.auxData,
-    })
-
     try {
       // Step 1 - Hash input to curve point (H1) using Elligator2
       const I = PedersenVRFProver.hashToCurve(input.input)
@@ -164,19 +157,6 @@ export class PedersenVRFProver {
       // Step 7 - Generate output commitment O_k = k*I
       const O_k = this.scalarMultiply(I, k)
 
-      // Debug: Check if O_k is valid
-      const O_kBytesChecked = this.usePaddingPointIfZero(O_k)
-      const IBytesChecked = this.usePaddingPointIfZero(I)
-      const O_kPoint = BandersnatchCurve.bytesToPoint(O_kBytesChecked)
-      const IPoint = BandersnatchCurve.bytesToPoint(IBytesChecked)
-      console.debug('Generated O_k point', {
-        O_kX: O_kPoint.x.toString(16),
-        O_kY: O_kPoint.y.toString(16),
-        k: bytesToBigIntLittleEndian(k).toString(16),
-        IX: IPoint.x.toString(16),
-        IY: IPoint.y.toString(16),
-      })
-
       // Step 8 - Generate challenge c = H2(Y_bar, I, O, R, O_k, ad)
       // This must be the same in both prover and verifier
       const c = this.generateChallenge(Y_bar, I, O, R, O_k, input.auxData)
@@ -185,33 +165,8 @@ export class PedersenVRFProver {
       const s = this.generateProofScalar(k, c, secretKey)
       const s_b = this.generateBlindingProofScalar(k_b, c, blindingFactor)
 
-      console.debug('Generated proof scalars', {
-        sLength: s.length,
-        s_bLength: s_b.length,
-        sHex: Array.from(s.slice(0, 8))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join(''),
-        s_bHex: Array.from(s_b.slice(0, 8))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join(''),
-      })
-
       // Step 10 - Hash output (H2)
       const hash = this.hashOutput(O)
-
-      const generationTime = Date.now() - startTime
-
-      console.debug('Pedersen VRF proof generated successfully', {
-        generationTime,
-        proofSize: this.serialize({
-          Y_bar,
-          R,
-          O_k,
-          s,
-          s_b,
-        }).length,
-        outputSize: hash.length,
-      })
 
       // Compress points for proof (arkworks uses compressed format)
       const Y_bar_compressed = Y_bar
@@ -302,18 +257,6 @@ export class PedersenVRFProver {
     const bB = BandersnatchCurve.scalarMultiply(blindingBase, b)
     const Y_bar = BandersnatchCurve.add(xG, bB)
 
-    // Debug: Check if Y_bar is valid
-    console.debug('Generated Y_bar point', {
-      Y_barX: Y_bar.x.toString(16),
-      Y_barY: Y_bar.y.toString(16),
-      x: x.toString(16),
-      b: b.toString(16),
-      xGX: xG.x.toString(16),
-      xGY: xG.y.toString(16),
-      bBX: bB.x.toString(16),
-      bBY: bB.y.toString(16),
-    })
-
     return BandersnatchCurve.pointToBytes(Y_bar)
   }
 
@@ -343,18 +286,6 @@ export class PedersenVRFProver {
       k_bScalar,
     )
     const R = BandersnatchCurve.add(kG, k_bB)
-
-    // Debug: Check if R is valid
-    console.debug('Generated R point', {
-      RX: R.x.toString(16),
-      RY: R.y.toString(16),
-      k: kScalar.toString(16),
-      k_b: k_bScalar.toString(16),
-      kGX: kG.x.toString(16),
-      kGY: kG.y.toString(16),
-      k_bBX: k_bB.x.toString(16),
-      k_bBY: k_bB.y.toString(16),
-    })
 
     return BandersnatchCurve.pointToBytes(R)
   }

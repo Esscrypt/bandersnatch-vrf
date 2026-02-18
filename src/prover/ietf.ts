@@ -9,7 +9,7 @@ import {
   mod,
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
-import { bytesToHex, hexToBytes } from 'viem'
+import { hexToBytes } from 'viem'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import {
   bytesToBigIntLittleEndian,
@@ -166,18 +166,6 @@ export class IETFVRFProver {
     // Rust reference: challenge_rfc_9381 uses from_be_bytes_mod_order (line 160 in common.rs)
     // So challenge computation always uses big-endian
     const c = generateChallengeRfc9381(challengePoints, auxData)
-
-    // Log challenge computation for debugging
-    console.debug('IETF VRF prover challenge computation', {
-      yHex: bytesToHex(BandersnatchCurve.pointToBytes(publicKeyPoint)),
-      iHex: bytesToHex(BandersnatchCurve.pointToBytes(alphaPoint)),
-      oHex: bytesToHex(BandersnatchCurve.pointToBytes(gammaPoint)),
-      kGHex: bytesToHex(BandersnatchCurve.pointToBytes(gToS)),
-      kIHex: bytesToHex(BandersnatchCurve.pointToBytes(hToC)),
-      auxDataHex: bytesToHex(auxData || new Uint8Array(0)),
-      auxDataLength: auxData?.length || 0,
-      challengeC: c.toString(16),
-    })
 
     // Calculate s = k + c * x (mod q)
     const x = mod(

@@ -1,27 +1,168 @@
 # `@pbnjam/bandersnatch-vrf`
 
-Verifiable Random Functions (VRFs) over the Bandersnatch curve.
+[![Tests](https://github.com/Esscrypt/peanutbutterandjam/actions/workflows/verify.yml/badge.svg)](https://github.com/Esscrypt/peanutbutterandjam/actions/workflows/verify.yml) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-This package builds on `@pbnjam/bandersnatch` and provides:
+**Production-grade Verifiable Random Functions (VRFs) on the Bandersnatch curve** for the [JAM](https://graypaper.com/) protocol. This package is part of [Peanut Butter AND JAM (PBNJ)](https://github.com/Esscrypt/peanutbutterandjam) and extends `@pbnjam/bandersnatch` with:
 
-- **IETF VRF** (RFC-9381-style) prover/verifier
-- **Pedersen VRF** prover/verifier (with blinding)
-- **Ring VRF** prover/verifier (Pedersen VRF + KZG-based ring membership proofs), including a WASM-backed variant
-- **Hash-to-curve / nonce / challenge utilities** used by the VRF schemes
+- **IETF VRF** — RFC 9381–style prover/verifier (Elligator2 hash-to-curve)
+- **Pedersen VRF** — Prover/verifier with blinding
+- **Ring VRF** — Pedersen VRF plus KZG ring membership proofs; **WASM** and **W3F** (native Rust) backends
+- **Crypto utilities** — Hash-to-curve, nonce generation, challenge hashing (reusable building blocks)
+
+| Resource | Link |
+|----------|------|
+| Monorepo docs | [Getting started](https://www.peanutbutterandjam.xyz/getting-started) |
+| Specification | [Gray Paper](https://graypaper.com/) |
+| Changelog (this package) | [CHANGELOG.md](CHANGELOG.md) |
+| API (this package) | This README; run `bun run docs` for TypeDoc output |
+
+---
+
+## Table of contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Getting started](#getting-started)
+- [Usage](#usage)
+- [Schemes](#schemes)
+- [Crypto utilities](#crypto-utilities)
+- [Development](#development)
+- [Notes](#notes)
+- [Contributing](#contributing)
+- [License](#license)
+- [Security](#security)
+- [Support and references](#support-and-references)
+- [Changelog](CHANGELOG.md)
+
+---
+
+## Prerequisites
+
+- **[Bun](https://bun.sh/)** (v1.3.x or later) — primary runtime and package manager
+- **Rust** (stable) — only if using the **W3F** Ring VRF backend (native `rust-ring-proof` module)
 
 ## Installation
 
-This repository uses Bun workspaces. From the monorepo root:
+From the [PBNJ monorepo](https://github.com/Esscrypt/peanutbutterandjam) root:
 
 ```bash
+git clone https://github.com/Esscrypt/peanutbutterandjam.git
+cd peanutbutterandjam
+git submodule update --init --recursive
 bun install
 ```
 
+To use this package from another workspace in the monorepo, depend on `@pbnjam/bandersnatch-vrf` in your `package.json`; the workspace will resolve it.
+
+## Getting started
+
+### SRS file (Ring VRF only)
+
+Ring VRF requires a **Structured Reference String (SRS)** in uncompressed arkworks format. The package includes a test SRS for rings up to size 2¹¹:
+
+| Item | Value |
+|------|--------|
+| Path (from package root) | `test-data/srs/zcash-srs-2-11-uncompressed.bin` |
+| In monorepo | `packages/bandersnatch-vrf/test-data/srs/zcash-srs-2-11-uncompressed.bin` |
+
+Pass the resolved path to the `RingVRFProver*` and `RingVRFVerifier*` constructors. From other packages (e.g. `infra/node`), resolve relative to the repo root or your app (e.g. `path.join`).
+
+### Ring VRF: W3F vs WASM
+
+| Backend | Classes | When to use |
+|---------|---------|--------------|
+| **WASM** | `RingVRFProverWasm`, `RingVRFVerifierWasm` | Any environment; no native build. |
+| **W3F** | `RingVRFProverW3F`, `RingVRFVerifierW3F` | Higher throughput; requires `bun run build:native` (Rust). |
+
+Both backends use the same SRS and produce **interchangeable** proofs (same gamma/beta; verifiers accept proofs from either).
+
+### Simple usage: W3F prover and verifier
+
+```ts
+import path from 'node:path'
+import { RingVRFProverW3F, RingVRFVerifierW3F } from '@pbnjam/bandersnatch-vrf'
+import { hexToBytes } from 'viem'
+
+const srsFilePath = path.join(
+  __dirname,
+  'test-data/srs/zcash-srs-2-11-uncompressed.bin',
+)
+
+async function main() {
+  const prover = new RingVRFProverW3F(srsFilePath)
+  await prover.init()
+  const verifier = new RingVRFVerifierW3F(srsFilePath)
+  await verifier.init()
+
+  const secretKey = hexToBytes('0x...')   // 32 bytes
+  const ringInput = {
+    input: hexToBytes('0x...'),           // VRF input
+    auxData: hexToBytes('0x...'),        // optional
+    ringKeys: [/* Uint8Array of compressed pubkeys, 32 bytes each */],
+    proverIndex: 0,                      // index of prover's key in ringKeys
+  }
+
+  const result = prover.prove(secretKey, ringInput)
+  // result.gamma, result.proof (pedersenProof, ringCommitment, ringProof)
+
+  const ok = verifier.verify(
+    ringInput.ringKeys,
+    ringInput,
+    { gamma: result.gamma, proof: result.proof },
+    ringInput.auxData,
+  )
+  console.log('Verified:', ok)
+}
+```
+
+### Simple usage: WASM prover and verifier
+
+```ts
+import path from 'node:path'
+import { RingVRFProverWasm, RingVRFVerifierWasm } from '@pbnjam/bandersnatch-vrf'
+import { hexToBytes } from 'viem'
+
+const srsFilePath = path.join(
+  __dirname,
+  'test-data/srs/zcash-srs-2-11-uncompressed.bin',
+)
+
+async function main() {
+  const prover = new RingVRFProverWasm(srsFilePath)
+  await prover.init()
+  const verifier = new RingVRFVerifierWasm(srsFilePath)
+  await verifier.init()
+
+  const secretKey = hexToBytes('0x...')
+  const ringInput = {
+    input: hexToBytes('0x...'),
+    auxData: hexToBytes('0x...'),
+    ringKeys: [/* Uint8Array, 32 bytes each */],
+    proverIndex: 0,
+  }
+
+  const result = prover.prove(secretKey, ringInput)
+  const ok = verifier.verify(
+    ringInput.ringKeys,
+    ringInput,
+    { gamma: result.gamma, proof: result.proof },
+    ringInput.auxData,
+  )
+  console.log('Verified:', ok)
+}
+```
+
+**Serialization:** Use `RingVRFProver.serialize(result)` for a `Uint8Array` and `RingVRFProver.deserialize(bytes)` to reconstruct a result. Verifiers accept either the raw `{ gamma, proof }` or the deserialized value.
+
+---
+
 ## Usage
+
+You can use the **CLI** (JSON files) or the **programmatic API** (see [Getting started](#getting-started) and [Import the public API](#import-the-public-api)).
 
 ### Command-Line Interface (CLI)
 
-The package provides a CLI for proving and verifying VRF proofs using JSON file inputs.
+The CLI proves and verifies VRF proofs using JSON input/output files.
 
 #### Basic Usage
 
@@ -173,12 +314,14 @@ import {
   PedersenVRFProver,
   RingVRFProver,
   RingVRFProverWasm,
+  RingVRFProverW3F,
 
   // Verifiers
   IETFVRFVerifier,
   PedersenVRFVerifier,
   RingVRFVerifier,
   RingVRFVerifierWasm,
+  RingVRFVerifierW3F,
 
   // Crypto helpers
   elligator2HashToCurve,
@@ -199,7 +342,14 @@ import {
 
 ## Schemes
 
-### IETF VRF (RFC-9381-style)
+| Scheme | Prover | Verifier | Notes |
+|--------|--------|----------|--------|
+| IETF VRF | `IETFVRFProver` | `IETFVRFVerifier` | RFC 9381; Elligator2 hash-to-curve |
+| Pedersen VRF | `PedersenVRFProver` | `PedersenVRFVerifier` | Blinded; no SRS |
+| Ring VRF (WASM) | `RingVRFProverWasm` | `RingVRFVerifierWasm` | SRS required; no native build |
+| Ring VRF (W3F) | `RingVRFProverW3F` | `RingVRFVerifierW3F` | SRS required; native Rust; faster |
+
+### IETF VRF (RFC 9381)
 
 - **Prover**: `IETFVRFProver.prove(secretKey, input, auxData?)` → `{ gamma, proof }`
 - **Verifier**: `IETFVRFVerifier.verify(publicKey, input, proof, auxData?)` → `boolean`
@@ -225,20 +375,22 @@ Ring VRF combines:
 - A Pedersen VRF proof (blinded)
 - A ring membership proof over a ring of public keys (KZG commitments)
 
+SRS: use the same SRS file for all Ring VRF provers/verifiers, e.g. `test-data/srs/zcash-srs-2-11-uncompressed.bin` (see [Getting started](#getting-started)).
+
 Main entry points:
 
-- **Prover**: `new RingVRFProver(srsFilePath)` then `prove(secretKey, input)`
-- **Verifier**: `new RingVRFVerifier(srsFilePath)` then `verify(ringKeys, input, serializedResult, auxData?)`
+- **Prover**: `new RingVRFProver(srsFilePath)` then `prove(secretKey, input)` (TypeScript/KZG). Or use **W3F** / **WASM** backends: `RingVRFProverW3F`, `RingVRFProverWasm` (see [Simple usage](#simple-usage-w3f-prover-and-verifier) above).
+- **Verifier**: `new RingVRFVerifier(srsFilePath)` then `verify(ringKeys, input, serializedResult, auxData?)`. Or `RingVRFVerifierW3F`, `RingVRFVerifierWasm`.
 
 Serialization helpers:
 
 - `RingVRFProver.serialize(result)` → `Uint8Array`
 - `RingVRFProver.deserialize(bytes)` → `RingVRFResult`
 
-WASM-backed variants are also exported:
+WASM- and W3F-backed variants:
 
-- `RingVRFProverWasm`
-- `RingVRFVerifierWasm`
+- **WASM**: `RingVRFProverWasm`, `RingVRFVerifierWasm` (ark-vrf WASM; no native build).
+- **W3F**: `RingVRFProverW3F`, `RingVRFVerifierW3F` (native Rust; faster; requires `bun run build:native`).
 
 ## Crypto utilities
 
@@ -257,14 +409,13 @@ The `crypto/` exports are intended to be reusable building blocks:
 
 ## Development
 
-From `packages/bandersnatch-vrf`:
+From the package directory (`packages/bandersnatch-vrf`):
 
 ```bash
-bun run test
-```
-
-```bash
-bun run build
+bun run build    # build package
+bun run test     # run test suite
+bun run build:native   # build Rust ring-proof module (optional; for W3F backend)
+bun run docs     # generate API documentation (TypeDoc → docs/)
 ```
 
 ### Ring VRF benchmarks (WASM vs W3F)
@@ -294,10 +445,34 @@ W3F (native) is roughly **4–6× faster** on prove and **~3× faster** on verif
 
 ## Notes
 
-- Many functions operate on **compressed curve points** (`Uint8Array`, 32 bytes) and scalars in **little-endian** form, matching the in-repo codec expectations.
-- For Ring VRF, you must provide a compatible **SRS file** path when constructing prover/verifier instances.
+- **Data formats:** Compressed curve points are 32-byte `Uint8Array`s; scalars are **little-endian**, consistent with the JAM codec.
+- **Ring VRF:** Prover and verifier constructors require a path to a compatible SRS file (see [SRS file](#srs-file-ring-vrf-only)).
+- **Specification:** Ring VRF test vectors align with the bandersnatch-vrf-spec; IETF VRF follows [RFC 9381](https://www.rfc-editor.org/rfc/rfc9381.html).
 
+---
 
+## Contributing
+
+This package is part of [Peanut Butter AND JAM (PBNJ)](https://github.com/Esscrypt/peanutbutterandjam) and is developed as a [submodule](https://github.com/Esscrypt/bandersnatch-vrf) with its own issue and PR templates. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and process. When opening issues or PRs in this repo: [Bug report](https://github.com/Esscrypt/bandersnatch-vrf/issues/new?template=bug_report.md), [Feature request](https://github.com/Esscrypt/bandersnatch-vrf/issues/new?template=feature_request.md), [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+
+---
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). See [LICENSE](LICENSE) in this directory.
+
+---
+
+## Security
+
+To report a security vulnerability, do **not** open a public issue. See [SECURITY.md](../../SECURITY.md) in the repository root for responsible disclosure.
+
+---
+
+## Support and references
+
+- **JAM protocol and PBNJ:** [Gray Paper](https://graypaper.com/), [PBNJ docs](https://www.peanutbutterandjam.xyz/getting-started)
+- **Issues and discussions:** [GitHub Issues](https://github.com/Esscrypt/peanutbutterandjam/issues)
 
 
 
