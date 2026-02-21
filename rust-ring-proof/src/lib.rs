@@ -1,8 +1,10 @@
-//! Rust connector for ring proof generation.
+//! Rust connector for ring proof generation and IETF VRF.
 //!
-//! Handles only the core logic (lines 299-316): RingPiopParams::setup, index, RingProver::init, prove.
-//! TypeScript handles: validations (lengths, bounds), deserialization error handling, and serialization
-//! of the proof bytes to the final output format (serializeProofToOutput).
+//! Ring proof: handles core logic (RingPiopParams::setup, index, RingProver::init, prove).
+//! IETF VRF: handles RFC-9381 prove and verify via ark-vrf BandersnatchSha512Ell2 suite.
+//! TypeScript handles: validations, deserialization error handling, and proof serialization.
+
+pub mod ietf;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;

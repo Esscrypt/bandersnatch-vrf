@@ -4,6 +4,7 @@
 
 // Implementation exports
 export * from './ietf'
+export * from './ietf-w3f'
 export * from './pedersen'
 export * from './ring-kzg'
 export * from './ring-kzg-w3f'

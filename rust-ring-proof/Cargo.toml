@@ -22,6 +22,9 @@ ark-serialize = { version = "0.5", default-features = true, features = ["derive"
 ark-ff = { version = "0.5", default-features = true }
 w3f-pcs = { version = "0.0.2", default-features = true }
 
+# ark-vrf for IETF VRF (prove + verify); bandersnatch suite.
+ark-vrf = { path = "../../../submodules/ark-vrf", default-features = false, features = ["std", "bandersnatch"] }
+
 [build-dependencies]
 napi-build = "2"
 

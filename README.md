@@ -449,6 +449,28 @@ W3F (native) is roughly **4–6× faster** on prove and **~3× faster** on verif
 - **Ring VRF:** Prover and verifier constructors require a path to a compatible SRS file (see [SRS file](#srs-file-ring-vrf-only)).
 - **Specification:** Ring VRF test vectors align with the bandersnatch-vrf-spec; IETF VRF follows [RFC 9381](https://www.rfc-editor.org/rfc/rfc9381.html).
 
+### W3F Ring VRF memory footprint
+
+Calling `await prover.init()` / `await verifier.init()` on the W3F (native Rust) backend is a **one-time, upfront cost** that can consume several gigabytes of native process memory. For a full JAM validator ring of 1 023 keys, expect **~3–4 GB RSS** after initialisation.
+
+**Why so large?**  
+The `RingPiopParams::setup` step precomputes polynomial commitment data (Lagrange bases, KZG evaluations) for every validator public key in the ring. This data is allocated on the Rust heap inside the napi-rs native module and held for the lifetime of the process so that individual prove/verify calls are fast.
+
+**What you will observe in `process.memoryUsage()`:**
+
+| Field | Typical value | What it represents |
+|-------|--------------|---------------------|
+| `heapUsed` | ~500 MB | JavaScript objects (services, state, etc.) |
+| `external` | ~100–150 MB | Node.js Buffers / TypedArrays |
+| `rss` | ~3.5–4 GB | Total process RSS, includes Rust native heap |
+| **Gap** (`rss − heap − external`) | **~3–3.5 GB** | **Rust ring-proof precomputed data** (not tracked by JS GC) |
+
+The gap does **not** appear in `heapUsed` or `external` because napi-rs allocations bypass the JavaScript garbage collector entirely. This is expected behaviour, not a memory leak — the value is stable after init and does not grow with block count.
+
+**Mitigation options:**
+- Use the **WASM** backend (`RingVRFProverWasm`) if resident memory is a hard constraint; WASM linear memory is larger than V8's tracked `external` but the footprint profile differs.
+- Initialise the prover and verifier **once** at process start and reuse them across all operations; re-initialising for every block or trace multiplies the cost.
+
 ---
 
 ## Contributing
