@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/Esscrypt/bandersnatch-vrf/issues"
   },
-  "version": "0.7.2-rc9",
+  "version": "0.7.2-rc10",
   "type": "module",
   "scripts": {
     "build": "bun run build:native && tsc",
@@ -19,11 +19,17 @@
     "build:ts": "tsc",
     "build:bin": "bun build ./src/cli.ts --compile --outfile ./bin/bandersnatch-vrf --sourcemap --minify-whitespace --minify-syntax --target bun ",
     "test": "bun run build && bun test src/__tests__/ring-end-to-end.test.ts",
-    "prepare": "bun run build:native || echo 'Native build failed, continuing without native module'",
+    "prepare": "bun run build:native",
+    "prepublishOnly": "bun run build:native",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "docs": "npx typedoc --out docs --entryPoints src/index.ts --entryPointStrategy expand --readme none --name '@pbnjam/bandersnatch-vrf' --includeVersion"
   },
+  "files": [
+    "src/",
+    "rust-ring-proof/native/",
+    "README.md"
+  ],
   "dependencies": {
     "@pbnjam/bandersnatch": "0.7.2-rc2",
     "@pbnjam/types": "0.7.2-rc1",
