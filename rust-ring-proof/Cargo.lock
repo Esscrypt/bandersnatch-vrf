@@ -182,7 +182,9 @@ dependencies = [
 
 [[package]]
 name = "ark-vrf"
-version = "0.1.1"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b722df2194fd06cd069bb3cb29cd4bfce8e023b6cace34d314ee2cf4bd4df9b5"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -193,7 +195,7 @@ dependencies = [
  "digest",
  "rand_chacha",
  "sha2",
- "w3f-ring-proof",
+ "w3f-ring-proof 0.0.6",
  "zeroize",
 ]
 
@@ -529,8 +531,8 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "w3f-pcs",
- "w3f-ring-proof",
+ "w3f-pcs 0.0.2",
+ "w3f-ring-proof 0.0.2",
 ]
 
 [[package]]
@@ -696,6 +698,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "w3f-pcs"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ea1046a1deb6d26c34ba2d1f1bab4222d695d126502ee765f80b021753cb674"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-poly",
+ "ark-serialize",
+ "ark-std",
+ "merlin",
+]
+
+[[package]]
 name = "w3f-plonk-common"
 version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -708,7 +724,23 @@ dependencies = [
  "ark-std",
  "getrandom_or_panic",
  "rand_core",
- "w3f-pcs",
+ "w3f-pcs 0.0.2",
+]
+
+[[package]]
+name = "w3f-plonk-common"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "077db25196f87773d7f0784c0ea5b11f18f38d336fa25c24bc67d7936af05d7a"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-poly",
+ "ark-serialize",
+ "ark-std",
+ "getrandom_or_panic",
+ "rand_core",
+ "w3f-pcs 0.0.5",
 ]
 
 [[package]]
@@ -723,8 +755,24 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "ark-transcript",
- "w3f-pcs",
- "w3f-plonk-common",
+ "w3f-pcs 0.0.2",
+ "w3f-plonk-common 0.0.2",
+]
+
+[[package]]
+name = "w3f-ring-proof"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3afac5d485a6eed7c1762be4b7b70a6f9b346bd6eebe485f48b7d909a6773f5"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-poly",
+ "ark-serialize",
+ "ark-std",
+ "ark-transcript",
+ "w3f-pcs 0.0.5",
+ "w3f-plonk-common 0.0.6",
 ]
 
 [[package]]

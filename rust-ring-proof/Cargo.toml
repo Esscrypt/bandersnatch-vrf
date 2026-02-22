@@ -23,7 +23,9 @@ ark-ff = { version = "0.5", default-features = true }
 w3f-pcs = { version = "0.0.2", default-features = true }
 
 # ark-vrf for IETF VRF (prove + verify); bandersnatch suite.
-ark-vrf = { path = "../../../submodules/ark-vrf", default-features = false, features = ["std", "bandersnatch"] }
+# 0.1.1 matches the submodule commit previously used; pulling from crates.io removes the
+# submodule path dependency so Docker and CI builds no longer need submodules/ark-vrf.
+ark-vrf = { version = "0.2.1", default-features = false, features = ["std", "bandersnatch"] }
 
 [build-dependencies]
 napi-build = "2"

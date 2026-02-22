@@ -9,7 +9,7 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 
-use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fr};
+use ark_ed_on_bls12_381_bandersnatch::Fr;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_vrf::{
     ietf::{Proof as IetfProof, Prover as IetfProver, Verifier as IetfVerifier},
@@ -93,16 +93,14 @@ pub fn verify_ietf_vrf(
         )));
     }
 
-    let pk_point = EdwardsAffine::deserialize_compressed(pk_slice)
+    let public = Public::<BandersnatchSha512Ell2>::deserialize_compressed(pk_slice)
         .map_err(|e| Error::from_reason(format!("Failed to deserialize public key: {:?}", e)))?;
-    let public = Public::<BandersnatchSha512Ell2>::from(pk_point);
 
     let input = Input::<BandersnatchSha512Ell2>::new(input_slice)
         .ok_or_else(|| Error::from_reason("Failed to hash input to curve"))?;
 
-    let gamma = EdwardsAffine::deserialize_compressed(&proof_slice[..GAMMA_LEN])
+    let output = Output::<BandersnatchSha512Ell2>::deserialize_compressed(&proof_slice[..GAMMA_LEN])
         .map_err(|e| Error::from_reason(format!("Failed to deserialize gamma: {:?}", e)))?;
-    let output = Output::<BandersnatchSha512Ell2>::from(gamma);
 
     let proof = IetfProof::<BandersnatchSha512Ell2>::deserialize_compressed(
         &mut &proof_slice[GAMMA_LEN..],
