@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/Esscrypt/bandersnatch-vrf/issues"
   },
-  "version": "0.7.2-rc10",
+  "version": "0.7.2-rc11",
   "type": "module",
   "scripts": {
     "build": "bun run build:native && tsc",
@@ -28,6 +28,7 @@
   "files": [
     "src/",
     "rust-ring-proof/native/",
+    "wasm-ark-vrf/",
     "README.md"
   ],
   "dependencies": {
