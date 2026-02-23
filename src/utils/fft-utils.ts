@@ -5,7 +5,6 @@
  * These utilities can be used across the codebase to avoid code duplication.
  */
 
-import * as fft from '@noble/curves/abstract/fft.js'
 import type { bls12_381 } from '@noble/curves/bls12-381.js'
 
 /**
@@ -133,6 +132,9 @@ export function ifftFieldElements(
  * @param Fr - Field operations
  * @returns Object with omega and omegaInv
  */
+/** Multiplicative generator of BLS12-381 Fr* (matches arkworks). */
+const BLS12_381_FR_MULTIPLICATIVE_GENERATOR = 7n
+
 export function getOmegaForDomain(
   domainSize: number,
   Fr: typeof bls12_381.fields.Fr,
@@ -142,8 +144,8 @@ export function getOmegaForDomain(
     throw new Error(`Domain size must be power of 2, got ${domainSize}`)
   }
 
-  const roots = fft.rootsOfUnity(Fr, BigInt(domainSize))
-  const omega = roots.omega(logN)
+  const exponent = (Fr.ORDER - 1n) / BigInt(domainSize)
+  const omega = Fr.pow(BLS12_381_FR_MULTIPLICATIVE_GENERATOR, exponent)
   const omegaInv = Fr.inv(omega)
 
   return { omega, omegaInv }

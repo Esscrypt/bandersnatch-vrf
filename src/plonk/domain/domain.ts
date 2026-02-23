@@ -5,7 +5,6 @@
  * and domain-specific polynomials (Lagrange basis, vanishing polynomials, etc.)
  */
 
-import * as fft from '@noble/curves/abstract/fft.js'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { ifftFieldElements } from '../../utils/fft-utils'
 import type { DensePolynomial } from './polynomial'
@@ -108,39 +107,72 @@ export class Domain {
    * @returns Quotient polynomial
    */
   divideByVanishingPoly(poly: DensePolynomial): DensePolynomial {
-    // Vanishing polynomial: Z_H(X) = X^n - 1
-    // We need to compute q(X) such that p(X) = q(X) * Z_H(X) + r(X)
-    // where r(X) is the remainder (should be zero for valid constraints)
-
-    // Use IFFT to convert from evaluation form to coefficient form
-    // In production, this should use proper polynomial division
     const Fr = bls12_381.fields.Fr
     const n = this.size
 
-    // If polynomial degree is less than n, quotient is zero
-    if (poly.degree < n) {
+    let dividend = poly
+    if (this.hiding) {
+      dividend = this.multiplyByZkRowsVanishingPoly(poly)
+    }
+
+    if (dividend.degree < n) {
       return new DensePolynomialImpl([Fr.ZERO])
     }
 
-    // Compute quotient coefficients
-    // Use IFFT to interpolate evaluations to polynomial coefficients
-    const quotientCoeffs: bigint[] = []
-    const polyCoeffs = poly.coeffs
+    const temp = dividend.coeffs.map((c) => Fr.create(c))
+    const quotientDeg = dividend.degree - n
+    const quotientCoeffs: bigint[] = new Array(quotientDeg + 1)
 
-    // For each coefficient in quotient
-    for (let i = 0; i <= poly.degree - n; i++) {
-      // Quotient coefficient at position i is polynomial coefficient at position i+n
-      // (after accounting for the X^n term in vanishing polynomial)
-      const coeff = polyCoeffs[i + n] ?? Fr.ZERO
-      quotientCoeffs.push(coeff)
-    }
-
-    // If quotient is empty, return zero polynomial
-    if (quotientCoeffs.length === 0) {
-      return new DensePolynomialImpl([Fr.ZERO])
+    for (let i = dividend.degree; i >= n; i--) {
+      const q = temp[i]!
+      quotientCoeffs[i - n] = q
+      temp[i - n] = Fr.add(Fr.create(temp[i - n]!), Fr.create(q))
     }
 
     return new DensePolynomialImpl(quotientCoeffs)
+  }
+
+  /**
+   * Multiply polynomial by (X - w^{n-k})(X - w^{n-k+1})...(X - w^{n-1})
+   * This zeros out the last ZK_ROWS so the product is divisible by X^n - 1.
+   */
+  private multiplyByZkRowsVanishingPoly(
+    poly: DensePolynomial,
+  ): DensePolynomial {
+    const Fr = bls12_381.fields.Fr
+    const omega = this.domain1x.omega
+    const n = this.size
+
+    let result = poly
+    for (let i = 0; i < ZK_ROWS; i++) {
+      const rowIdx = n - ZK_ROWS + i
+      const root = Fr.pow(Fr.create(omega), BigInt(rowIdx))
+      result = this.multiplyByLinearFactor(result, root)
+    }
+    return result
+  }
+
+  /**
+   * Multiply polynomial by (X - root)
+   */
+  private multiplyByLinearFactor(
+    poly: DensePolynomial,
+    root: bigint,
+  ): DensePolynomial {
+    const Fr = bls12_381.fields.Fr
+    const oldCoeffs = poly.coeffs
+    const newCoeffs: bigint[] = new Array(oldCoeffs.length + 1)
+
+    newCoeffs[0] = Fr.neg(Fr.mul(Fr.create(root), Fr.create(oldCoeffs[0]!)))
+    for (let i = 1; i < oldCoeffs.length; i++) {
+      newCoeffs[i] = Fr.sub(
+        Fr.create(oldCoeffs[i - 1]!),
+        Fr.mul(Fr.create(root), Fr.create(oldCoeffs[i]!)),
+      )
+    }
+    newCoeffs[oldCoeffs.length] = Fr.create(oldCoeffs[oldCoeffs.length - 1]!)
+
+    return new DensePolynomialImpl(newCoeffs)
   }
 
   /**
@@ -232,6 +264,12 @@ export interface EvaluatedDomain {
 }
 
 /**
+ * Multiplicative generator of BLS12-381 Fr* used to derive roots of unity.
+ * 7 is the standard generator (matches arkworks).
+ */
+const BLS12_381_FR_MULTIPLICATIVE_GENERATOR = 7n
+
+/**
  * FFT Domain for field operations
  */
 export class FFTDomain {
@@ -244,14 +282,14 @@ export class FFTDomain {
     this.size = size
     this.Fr = bls12_381.fields.Fr
 
-    // Compute primitive root of unity
     const logN = Math.log2(size)
     if (logN % 1 !== 0) {
       throw new Error(`Domain size must be power of 2, got ${size}`)
     }
 
-    const roots = fft.rootsOfUnity(this.Fr, BigInt(size))
-    this.omega = roots.omega(logN)
+    // Compute primitive size-th root of unity: g^((r-1)/size) where g=7
+    const exponent = (this.Fr.ORDER - 1n) / BigInt(size)
+    this.omega = this.Fr.pow(BLS12_381_FR_MULTIPLICATIVE_GENERATOR, exponent)
     this.omegaInv = this.Fr.inv(this.omega)
   }
 

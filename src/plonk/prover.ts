@@ -5,15 +5,13 @@
  * Matches w3f-plonk-common/src/prover.rs
  */
 
-import * as fft from '@noble/curves/abstract/fft.js'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { curvePointToNoble } from '../crypto/elligator2'
 import {
   bigintToBytes32BE,
-  blobToKzgCommitment,
-  computeBlobKzgProof,
-  polynomialToBlob,
+  commitPolynomialCoeffs,
+  computeKzgProofFromCoeffs,
 } from '../utils/kzg-manual'
 import type { DensePolynomial } from './domain/polynomial'
 import { DensePolynomialImpl } from './domain/polynomial'
@@ -98,10 +96,8 @@ export class PlonkProver {
 
     // ROUND 1: Commit to witness columns
     const columnCommitments = piop.committedColumns((poly) => {
-      // Commit polynomial using KZG
-      const blob = polynomialToBlob(poly.coeffs)
-      const [error, commitment] = blobToKzgCommitment(
-        blob,
+      const [error, commitment] = commitPolynomialCoeffs(
+        poly.coeffs,
         this.pcsCk.srsG1Points,
       )
       if (error || !commitment) {
@@ -129,9 +125,8 @@ export class PlonkProver {
     const quotientPoly = domain.divideByVanishingPoly(aggConstraintPolyDense)
 
     // Commit to quotient polynomial
-    const quotientBlob = polynomialToBlob(quotientPoly.coeffs)
-    const [quotientError, quotientCommitment] = blobToKzgCommitment(
-      quotientBlob,
+    const [quotientError, quotientCommitment] = commitPolynomialCoeffs(
+      quotientPoly.coeffs,
       this.pcsCk.srsG1Points,
     )
     if (quotientError || !quotientCommitment) {
@@ -168,8 +163,8 @@ export class PlonkProver {
 
     // Generate KZG proofs
     const zetaBytes = bigintToBytes32BE(zeta)
-    const [aggProofError, aggAtZetaProof] = computeBlobKzgProof(
-      polynomialToBlob(aggAtZeta.coeffs),
+    const [aggProofError, aggAtZetaProof] = computeKzgProofFromCoeffs(
+      aggAtZeta.coeffs,
       zetaBytes,
       this.pcsCk.srsG1Points,
     )
@@ -180,8 +175,8 @@ export class PlonkProver {
     }
 
     const zetaOmegaBytes = bigintToBytes32BE(zetaOmega)
-    const [linProofError, linAtZetaOmegaProof] = computeBlobKzgProof(
-      polynomialToBlob(lin.coeffs),
+    const [linProofError, linAtZetaOmegaProof] = computeKzgProofFromCoeffs(
+      lin.coeffs,
       zetaOmegaBytes,
       this.pcsCk.srsG1Points,
     )
@@ -275,9 +270,8 @@ export class PlonkProver {
       throw new Error(`IFFT requires power of 2, got ${domainSize}`)
     }
 
-    // Get roots of unity for the domain
-    const roots = fft.rootsOfUnity(Fr, BigInt(domainSize))
-    const omega = roots.omega(logN)
+    const exponent = (Fr.ORDER - 1n) / BigInt(domainSize)
+    const omega = Fr.pow(7n, exponent)
     const omegaInv = Fr.inv(omega)
 
     const result = values.map((v) => Fr.create(v))

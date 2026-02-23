@@ -7,6 +7,8 @@
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import type { Domain } from '../domain/domain'
 import { FieldColumn } from '../domain/domain'
+import type { DensePolynomial } from '../domain/polynomial'
+import { DensePolynomialImpl } from '../domain/polynomial'
 
 /**
  * Inner Product Gadget
@@ -128,14 +130,16 @@ export class InnerProd {
 
   /**
    * Get linearized constraints at point z
+   * Returns acc(X) * notLast(z) as a polynomial
    */
-  constraintsLinearized(z: bigint): bigint[] {
+  constraintsLinearizedPolynomials(z: bigint): DensePolynomial[] {
     const Fr = bls12_381.fields.Fr
-    const notLastEval = this.notLast.evaluate(z)
+    const notLastEval = Fr.create(this.notLast.evaluate(z))
     const accPoly = this.acc.poly
-    // Return acc * notLast evaluated at z (matching Rust implementation)
-    const accEval = accPoly.evaluate(z)
-    return [Fr.mul(accEval, notLastEval)]
+    const scaledCoeffs = accPoly.coeffs.map((c) =>
+      Fr.mul(Fr.create(c), notLastEval),
+    )
+    return [new DensePolynomialImpl(scaledCoeffs)]
   }
 }
 
@@ -167,7 +171,8 @@ export class InnerProdValues {
     const notLastF = Fr.create(this.notLast)
 
     const product = Fr.mul(aF, bF)
-    const constraint = Fr.mul(Fr.sub(Fr.ZERO, accF), Fr.sub(product, accF))
+    const negAcc = Fr.sub(Fr.ZERO, accF)
+    const constraint = Fr.sub(negAcc, product)
     const result = Fr.mul(constraint, notLastF)
 
     return [result]
