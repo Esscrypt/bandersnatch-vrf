@@ -39,14 +39,14 @@ import { PedersenVRFProver } from './pedersen'
 // ---------------------------------------------------------------------------
 
 /** BLS12-381 scalar field modulus bit size; used for domain and max ring size. */
-const MODULUS_BIT_SIZE = 255
+export const MODULUS_BIT_SIZE = 255
 
-const KEY_SIZE = 32
-const COMMITMENT_SIZE = 48
+export const KEY_SIZE = 32
+export const COMMITMENT_SIZE = 48
 const EVALUATION_SIZE = 32
 
 /** Transcript label for Fiat-Shamir. Must match Rust SUITE_ID. */
-const SUITE_ID = 'Bandersnatch_SHA-512_ELL2'
+export const SUITE_ID = 'Bandersnatch_SHA-512_ELL2'
 
 /** Padding point bytes for null/invalid keys (compressed Twisted Edwards). */
 const PADDING_POINT_HEX =
@@ -64,7 +64,7 @@ function nextPowerOf2(n: number): number {
  * PIOP domain size from ring size.
  * Formula: (ring_size + 4 + MODULUS_BIT_SIZE).next_power_of_two()
  */
-function piopDomainSizeFromRingSize(ringSize: number): number {
+export function piopDomainSizeFromRingSize(ringSize: number): number {
   return nextPowerOf2(ringSize + 4 + MODULUS_BIT_SIZE)
 }
 
@@ -72,7 +72,7 @@ function piopDomainSizeFromRingSize(ringSize: number): number {
  * Max ring size for a given PIOP domain.
  * Formula: piop_domain_size - (4 + MODULUS_BIT_SIZE)
  */
-function maxRingSizeFromPiopDomain(piopDomainSize: number): number {
+export function maxRingSizeFromPiopDomain(piopDomainSize: number): number {
   return Math.max(0, piopDomainSize - (4 + MODULUS_BIT_SIZE))
 }
 
@@ -80,7 +80,7 @@ function maxRingSizeFromPiopDomain(piopDomainSize: number): number {
  * PCS domain size from ring size.
  * Formula: 3 * piop_domain_size(ring_size) + 1
  */
-function pcsDomainSizeFromRingSize(ringSize: number): number {
+export function pcsDomainSizeFromRingSize(ringSize: number): number {
   return 3 * piopDomainSizeFromRingSize(ringSize) + 1
 }
 
@@ -92,7 +92,7 @@ function pcsDomainSizeFromRingSize(ringSize: number): number {
  * Deserialize compressed Bandersnatch keys. Null (all-zero) or invalid keys
  * are replaced with the padding point, matching ark-vrf-wasm behaviour.
  */
-function parseRingKeys(
+export function parseRingKeys(
   ringKeysBytes: Uint8Array,
 ): Array<{ x: bigint; y: bigint }> {
   if (ringKeysBytes.length % KEY_SIZE !== 0) {
@@ -124,7 +124,7 @@ function parseRingKeys(
   return keys
 }
 
-function parseRingKeysFromArrays(
+export function parseRingKeysFromArrays(
   ringKeys: Uint8Array[],
 ): Array<{ x: bigint; y: bigint }> {
   const flat = new Uint8Array(ringKeys.length * KEY_SIZE)
@@ -147,7 +147,7 @@ function hexToUint8(hex: string): Uint8Array {
 // Verifier key serialization
 // ---------------------------------------------------------------------------
 
-function serializeVerifierKey(vk: {
+export function serializeVerifierKey(vk: {
   pcsRawVk: { g1: Uint8Array; g2: Uint8Array; tauInG2: Uint8Array }
   fixedColumnsCommitted: FixedColumnsCommitted
 }): Uint8Array {
@@ -174,9 +174,9 @@ function serializeVerifierKey(vk: {
 //   lin_at_zeta_omega_proof    48
 // ---------------------------------------------------------------------------
 
-const N_COMMITMENTS = 4
-const N_EVALUATIONS = 7
-const PROOF_SIZE =
+export const N_COMMITMENTS = 4
+export const N_EVALUATIONS = 7
+export const PROOF_SIZE =
   N_COMMITMENTS * COMMITMENT_SIZE +
   N_EVALUATIONS * EVALUATION_SIZE +
   COMMITMENT_SIZE +
@@ -214,7 +214,7 @@ function serializeProof(
   return buf
 }
 
-function bytes32BEToBigint(bytes: Uint8Array): bigint {
+export function bytes32BEToBigint(bytes: Uint8Array): bigint {
   let result = 0n
   for (let i = 0; i < 32; i++) {
     result = (result << 8n) | BigInt(bytes[i]!)
@@ -222,7 +222,7 @@ function bytes32BEToBigint(bytes: Uint8Array): bigint {
   return result
 }
 
-function deserializeProofStruct(
+export function deserializeProofStruct(
   proofBytes: Uint8Array,
 ): Proof<RingCommitments, RingEvaluations> {
   if (proofBytes.length !== PROOF_SIZE) {
