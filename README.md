@@ -77,7 +77,7 @@ Pass the resolved path to the `RingVRFProver*` and `RingVRFVerifier*` constructo
 
 For a **prover/verifier time comparison and analysis** of all three options, see [RING_VRF_PROVER_VERIFIER_ANALYSIS.md](docs/RING_VRF_PROVER_VERIFIER_ANALYSIS.md).
 
-Both WASM and W3F use the same SRS and produce **interchangeable** proofs (same gamma/beta; verifiers accept proofs from either).
+All three backends (Pure TypeScript, WASM, and W3F) use the same SRS and produce **interchangeable** proofs (same gamma/beta; verifiers from any backend accept proofs from any other).
 
 ### Simple usage: W3F prover and verifier
 
@@ -154,6 +154,45 @@ async function main() {
   console.log('Verified:', ok)
 }
 ```
+
+### Simple usage: Pure TypeScript prover and verifier
+
+```ts
+import path from 'node:path'
+import { RingVRFProver, RingVRFVerifier } from '@pbnjam/bandersnatch-vrf'
+import { hexToBytes } from 'viem'
+
+const srsFilePath = path.join(
+  __dirname,
+  'test-data/srs/zcash-srs-2-11-uncompressed.bin',
+)
+
+const ringSize = 8
+
+const prover = new RingVRFProver(srsFilePath, ringSize)
+const verifier = new RingVRFVerifier(srsFilePath, ringSize)
+
+const secretKey = hexToBytes('0x...')   // 32 bytes
+const ringInput = {
+  input: hexToBytes('0x...'),           // VRF input
+  auxData: hexToBytes('0x...'),         // optional
+  ringKeys: [/* Uint8Array of compressed pubkeys, 32 bytes each */],
+  proverIndex: 0,                       // index of prover's key in ringKeys
+}
+
+const result = prover.prove(secretKey, ringInput)
+// result.gamma, result.proof (pedersenProof, ringCommitment, ringProof)
+
+const ok = verifier.verify(
+  ringInput.ringKeys,
+  ringInput,
+  { gamma: result.gamma, proof: result.proof },
+  ringInput.auxData,
+)
+console.log('Verified:', ok)
+```
+
+The Pure TypeScript backend requires no native build and no WASM runtime. Construction is synchronous (no `init()` call needed), and it accepts an explicit `ringSize` parameter. It is significantly slower than the WASM and W3F backends (see [benchmarks](#ring-vrf-benchmarks-wasm-vs-w3f-vs-pure-typescript)) but useful for testing, tooling, and environments where only a JavaScript runtime is available.
 
 **Serialization:** Use `RingVRFProver.serialize(result)` for a `Uint8Array` and `RingVRFProver.deserialize(bytes)` to reconstruct a result. Verifiers accept either the raw `{ gamma, proof }` or the deserialized value.
 
@@ -349,8 +388,9 @@ import {
 |--------|--------|----------|--------|
 | IETF VRF | `IETFVRFProver` | `IETFVRFVerifier` | RFC 9381; Elligator2 hash-to-curve |
 | Pedersen VRF | `PedersenVRFProver` | `PedersenVRFVerifier` | Blinded; no SRS |
+| Ring VRF (Pure TS) | `RingVRFProver` | `RingVRFVerifier` | SRS required; no native/WASM build; slowest |
 | Ring VRF (WASM) | `RingVRFProverWasm` | `RingVRFVerifierWasm` | SRS required; no native build |
-| Ring VRF (W3F) | `RingVRFProverW3F` | `RingVRFVerifierW3F` | SRS required; native Rust; faster |
+| Ring VRF (W3F) | `RingVRFProverW3F` | `RingVRFVerifierW3F` | SRS required; native Rust; fastest |
 
 ### IETF VRF (RFC 9381)
 
