@@ -14,7 +14,6 @@ import { RingVRFVerifierW3F } from '../verifier/ring-w3f'
 import { PedersenVRFProver } from '../prover/pedersen'
 import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma'
 import type { RingVRFInput } from '../prover/ring-kzg'
-import path from 'node:path'
 
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ring.json
 const testVectorsPath = join(
@@ -122,12 +121,18 @@ class RingTestVectorUtils {
   }
 }
 
+function timeMs(fn: () => void): number {
+  const start = performance.now()
+  fn()
+  return performance.now() - start
+}
+
 describe('Ring VRF End-to-End Tests (Native)', () => {
   let ringProver: RingVRFProverW3F
   let ringVerifier: RingVRFVerifierW3F
   
   beforeAll(async () => {
-    const srsFilePath = path.join(__dirname, '../../../../packages/bandersnatch-vrf/test-data/srs/zcash-srs-2-11-uncompressed.bin')
+    const srsFilePath = join(__dirname, 'test-data/srs/zcash-srs-2-11-uncompressed.bin')
     // Wait for WASM initialization to complete
     ringProver = new RingVRFProverW3F(srsFilePath)
     await ringProver.init()
@@ -151,9 +156,31 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
         // }
         
         try {
-          // Generate proof
-          const proofResult = ringProver.prove(secretKey, ringInput)
-          
+          // ----- Benchmark: prove -----
+          let proofResult!: Awaited<ReturnType<RingVRFProverW3F['prove']>>
+          const proveMs = timeMs(() => {
+            proofResult = ringProver.prove(secretKey, ringInput)
+          })
+
+          // ----- Benchmark: verify -----
+          const verificationInputForBench: RingVRFInput = {
+            input: ringInput.input,
+            auxData: ringInput.auxData,
+            ringKeys: ringInput.ringKeys,
+            proverIndex: ringInput.proverIndex,
+          }
+          const verifyMs = timeMs(() => {
+            const isValid = ringVerifier.verify(
+              ringInput.ringKeys,
+              verificationInputForBench,
+              { gamma: proofResult!.gamma, proof: proofResult!.proof },
+              ringInput.auxData,
+            )
+            if (!isValid) throw new Error('Verify failed')
+          })
+          console.log(`\n--- Benchmark (${vector.comment}) ---`)
+          console.log(`  W3F: prove ${proveMs.toFixed(2)} ms, verify ${verifyMs.toFixed(2)} ms`)
+
           // ===== VRF Output Values (Exact Match Required) =====
           const actualGamma = bytesToHex(proofResult.gamma).slice(2) // Remove 0x
           const actualBeta = bytesToHex(getCommitmentFromGamma(proofResult.gamma)).slice(2) // Remove 0x

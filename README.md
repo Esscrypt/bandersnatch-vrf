@@ -67,14 +67,17 @@ Ring VRF requires a **Structured Reference String (SRS)** in uncompressed arkwor
 
 Pass the resolved path to the `RingVRFProver*` and `RingVRFVerifier*` constructors. From other packages (e.g. `infra/node`), resolve relative to the repo root or your app (e.g. `path.join`).
 
-### Ring VRF: W3F vs WASM
+### Ring VRF: W3F vs WASM vs Pure TypeScript
 
 | Backend | Classes | When to use |
 |---------|---------|--------------|
 | **WASM** | `RingVRFProverWasm`, `RingVRFVerifierWasm` | Any environment; no native build. |
 | **W3F** | `RingVRFProverW3F`, `RingVRFVerifierW3F` | Higher throughput; requires `bun run build:native` (Rust). |
+| **Pure TypeScript** | `RingVRFProver`, `RingVRFVerifier` | No Rust/WASM; tests and tooling; slowest. |
 
-Both backends use the same SRS and produce **interchangeable** proofs (same gamma/beta; verifiers accept proofs from either).
+For a **prover/verifier time comparison and analysis** of all three options, see [RING_VRF_PROVER_VERIFIER_ANALYSIS.md](docs/RING_VRF_PROVER_VERIFIER_ANALYSIS.md).
+
+Both WASM and W3F use the same SRS and produce **interchangeable** proofs (same gamma/beta; verifiers accept proofs from either).
 
 ### Simple usage: W3F prover and verifier
 
@@ -418,9 +421,11 @@ bun run build:native   # build Rust ring-proof module (optional; for W3F backend
 bun run docs     # generate API documentation (TypeDoc → docs/)
 ```
 
-### Ring VRF benchmarks (WASM vs W3F)
+### Ring VRF benchmarks (WASM vs W3F vs Pure TypeScript)
 
-The ring end-to-end test runs both **WASM** (ark-vrf-wasm) and **W3F** (native Rust when built, else WASM) prover and verifier and reports execution time for each.
+For a **full comparison** of prover/verifier times and trade-offs across all three backends (WASM, W3F, Pure TypeScript), see **[RING_VRF_PROVER_VERIFIER_ANALYSIS.md](docs/RING_VRF_PROVER_VERIFIER_ANALYSIS.md)**.
+
+The ring end-to-end test runs **Pure TypeScript** (and optionally WASM/W3F when available) and reports execution time for each.
 
 **Command** (from `packages/bandersnatch-vrf`):
 
@@ -436,12 +441,25 @@ bun test src/__tests__/ring-end-to-end.test.ts
 
 **Typical results** (2 test vectors, ring size 8):
 
+| Backend | Prove | Verify |
+|---------|-------|--------|
+| **Pure TypeScript** | ~25–26 s | ~5 s |
+| **WASM** | ~740–1 400 ms | ~170–220 ms |
+| **W3F (native)** | ~190–220 ms | ~66–72 ms |
+
+**Per-vector (Pure TypeScript)** — from `bun test src/__tests__/ring-end-to-end.test.ts`:
+
+| Vector | Pure TS prove | Pure TS verify |
+|--------|----------------|-----------------|
+| 1 (bandersnatch_sha-512_ell2_ring) | 25 867 ms | 5 018 ms |
+| 2 (bandersnatch_sha-512_ell2_ring) | 26 463 ms | 4 895 ms |
+
 | Vector | WASM prove | WASM verify | W3F prove | W3F verify |
 |--------|------------|-------------|-----------|------------|
 | 1      | ~1400 ms   | ~220 ms     | ~220 ms   | ~72 ms     |
 | 2      | ~740 ms    | ~170 ms     | ~190 ms   | ~66 ms     |
 
-W3F (native) is roughly **4–6× faster** on prove and **~3× faster** on verify. Both backends produce identical gamma/beta and verify successfully; WASM output is checked against the bandersnatch-vrf-spec test vectors.
+W3F (native) is roughly **4–6× faster** than WASM on prove and **~3× faster** on verify. Pure TypeScript is ~100× slower than W3F and is intended for environments that cannot use native or WASM. See [RING_VRF_PROVER_VERIFIER_ANALYSIS.md](docs/RING_VRF_PROVER_VERIFIER_ANALYSIS.md) for the full comparison.
 
 ## Notes
 

@@ -416,11 +416,11 @@ export async function verifyRing(inputPath: string): Promise<void> {
       ringInput.auxData,
     )
   } else {
-    const verifier = new RingVRFVerifier(input.srsFilePath)
+    const verifier = new RingVRFVerifier(input.srsFilePath, ringKeys.length)
     isValid = verifier.verify(
       ringKeys,
       ringInput,
-      serializedResult,
+      deserializedResult,
       ringInput.auxData,
     )
   }

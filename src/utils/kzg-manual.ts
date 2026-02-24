@@ -167,39 +167,46 @@ export function blobToKzgCommitment(
     )
   }
 
-  // Extract polynomial coefficients from blob
   const polynomial = blobToPolynomial(blob)
+  return commitPolynomialCoeffs(polynomial, srsG1Points)
+}
 
-  // We need at least as many SRS points as polynomial coefficients
-  const maxDegree = polynomial.length - 1
-  if (srsG1Points.length < polynomial.length) {
+/**
+ * Commit directly to polynomial coefficients using MSM.
+ *
+ * Unlike blobToKzgCommitment, this accepts variable-length coefficient arrays
+ * and does not require the fixed 2048-element blob format.
+ *
+ * Computes: C = Σ(c_i * τ^i * G)
+ *
+ * @param coeffs - Polynomial coefficients (bigint[])
+ * @param srsG1Points - SRS G1 points [G, τG, τ²G, ..., τ^(n-1)G]
+ * @returns KZG commitment (48-byte compressed BLS12-381 G1 point)
+ */
+export function commitPolynomialCoeffs(
+  coeffs: bigint[],
+  srsG1Points: Uint8Array[],
+): Safe<Uint8Array> {
+  if (srsG1Points.length < coeffs.length) {
     return safeError(
       new Error(
-        `SRS has ${srsG1Points.length} points, but polynomial has ${polynomial.length} coefficients (degree ${maxDegree})`,
+        `SRS has ${srsG1Points.length} points, but polynomial has ${coeffs.length} coefficients (degree ${coeffs.length - 1})`,
       ),
     )
   }
 
-  // Compute commitment: C = Σ(c_i * τ^i * G)
-  // This is a multi-scalar multiplication (MSM)
   let commitment = bls12_381.G1.Point.ZERO
 
-  for (let i = 0; i < polynomial.length; i++) {
-    const coeff = polynomial[i]!
-    if (coeff === 0n) continue // Skip zero coefficients
+  for (let i = 0; i < coeffs.length; i++) {
+    const coeff = coeffs[i]!
+    if (coeff === 0n) continue
 
-    // Reduce coefficient modulo BLS12-381 scalar field
     const reducedCoeff = mod(coeff, BLS12_381_SCALAR_FIELD_ORDER)
-
-    // Get SRS point: τ^i * G
     const srsPoint = bls12_381.G1.Point.fromBytes(srsG1Points[i]!)
-
-    // Add: commitment += coeff * (τ^i * G)
     const scaledPoint = srsPoint.multiply(reducedCoeff)
     commitment = commitment.add(scaledPoint)
   }
 
-  // Return compressed point (48 bytes)
   return safeResult(commitment.toBytes(true))
 }
 
@@ -233,26 +240,38 @@ export function computeBlobKzgProof(
     )
   }
 
+  const polynomial = blobToPolynomial(blob)
+  return computeKzgProofFromCoeffs(polynomial, zBytes, srsG1Points)
+}
+
+/**
+ * Compute KZG proof directly from polynomial coefficients.
+ *
+ * Computes: π = Q(τ) * G where Q(x) = (p(x) - p(z)) / (x - z)
+ *
+ * Unlike computeBlobKzgProof, this accepts variable-length coefficient arrays.
+ *
+ * @param polynomial - Polynomial coefficients (bigint[])
+ * @param zBytes - Evaluation point z (32 bytes, big-endian)
+ * @param srsG1Points - SRS G1 points in monomial basis
+ * @returns KZG proof (48-byte compressed BLS12-381 G1 point)
+ */
+export function computeKzgProofFromCoeffs(
+  polynomial: bigint[],
+  zBytes: Uint8Array,
+  srsG1Points: Uint8Array[],
+): Safe<Uint8Array> {
   if (zBytes.length !== 32) {
     return safeError(new Error(`z must be 32 bytes, got ${zBytes.length}`))
   }
 
-  // Extract polynomial coefficients
-  const polynomial = blobToPolynomial(blob)
   const z = bytes32BEToBigint(zBytes)
-
-  // Reduce z modulo BLS12-381 scalar field
   const zReduced = mod(z, BLS12_381_SCALAR_FIELD_ORDER)
-
-  // Step 1: Evaluate polynomial at z: y = p(z) = Σ(c_i * z^i)
   const y = evaluatePolynomialAt(polynomial, z)
 
-  // Step 2: Compute quotient polynomial Q(x) = (p(x) - y) / (x - z)
-  // Using synthetic division (Horner's method)
   const n = polynomial.length
   const quotient: bigint[] = new Array(n - 1).fill(0n)
 
-  // Synthetic division: work from highest degree to lowest
   if (n > 1) {
     quotient[n - 2] = polynomial[n - 1] ?? 0n
   }
@@ -260,16 +279,13 @@ export function computeBlobKzgProof(
   for (let i = n - 3; i >= 0; i--) {
     const coeff = polynomial[i + 1] ?? 0n
     const nextQ = quotient[i + 1] ?? 0n
-    // q_i = c_{i+1} + z * q_{i+1}
     quotient[i] = mod(
       coeff + mod(zReduced * nextQ, BLS12_381_SCALAR_FIELD_ORDER),
       BLS12_381_SCALAR_FIELD_ORDER,
     )
   }
 
-  // Adjust constant term: q_0 = (c_0 - y) / (-z) = (y - c_0) / z
   if (zReduced === 0n) {
-    // Special case: z = 0, so Q(x) = (p(x) - c_0) / x
     for (let i = 0; i < n - 1; i++) {
       quotient[i] = polynomial[i + 1] ?? 0n
     }
@@ -280,21 +296,7 @@ export function computeBlobKzgProof(
     quotient[0] = mod(numerator * zInv, BLS12_381_SCALAR_FIELD_ORDER)
   }
 
-  // Step 3: Commit to quotient polynomial using SRS
-  // π = Σ(q_i * τ^i * G)
-  let proof = bls12_381.G1.Point.ZERO
-
-  for (let i = 0; i < quotient.length; i++) {
-    const q_i = quotient[i] ?? 0n
-    if (q_i === 0n) continue
-
-    const reducedQ = mod(q_i, BLS12_381_SCALAR_FIELD_ORDER)
-    const srsPoint = bls12_381.G1.Point.fromBytes(srsG1Points[i]!)
-    const scaledPoint = srsPoint.multiply(reducedQ)
-    proof = proof.add(scaledPoint)
-  }
-
-  return safeResult(proof.toBytes(true))
+  return commitPolynomialCoeffs(quotient, srsG1Points)
 }
 
 /**

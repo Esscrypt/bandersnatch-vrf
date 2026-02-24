@@ -214,10 +214,9 @@ export class PiopProver {
   constraintsLinearized(zeta: bigint): DensePolynomial[] {
     const result: DensePolynomial[] = []
 
-    // InnerProd returns array of bigint (coefficients)
-    const innerProdCoeffs = this.innerProd.constraintsLinearized(zeta)
-    for (const coeff of innerProdCoeffs) {
-      result.push(new DensePolynomialImpl([coeff]))
+    const innerProdPolys = this.innerProd.constraintsLinearizedPolynomials(zeta)
+    for (const poly of innerProdPolys) {
+      result.push(poly)
     }
 
     // CondAdd returns DensePolynomial[] directly (special case)
