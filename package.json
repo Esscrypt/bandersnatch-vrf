@@ -32,7 +32,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@pbnjam/bandersnatch": "0.7.2-rc2",
+    "@pbnjam/bandersnatch": "0.7.2-rc3",
     "@pbnjam/types": "0.7.2-rc1",
     "@noble/curves": "2.0.1",
     "@noble/ed25519": "3.0.0",

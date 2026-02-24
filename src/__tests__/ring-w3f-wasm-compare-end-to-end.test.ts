@@ -131,6 +131,12 @@ function replaceNullKeyWithPadding(keyBytes: Uint8Array): Uint8Array {
   return keyBytes
 }
 
+function timeMs(fn: () => void): number {
+  const start = performance.now()
+  fn()
+  return performance.now() - start
+}
+
 describe('Ring VRF End-to-End Tests (WASM)', () => {
   let ringProver: RingVRFProverW3F
   let ringVerifier: RingVRFVerifierW3F
@@ -162,9 +168,31 @@ describe('Ring VRF End-to-End Tests (WASM)', () => {
         // }
         
         try {
-          // Generate proof
-          const proofResult = ringProver.prove(secretKey, ringInput)
-          
+          // ----- Benchmark: prove -----
+          let proofResult!: Awaited<ReturnType<RingVRFProverW3F['prove']>>
+          const proveMs = timeMs(() => {
+            proofResult = ringProver.prove(secretKey, ringInput)
+          })
+
+          // ----- Benchmark: verify -----
+          const verificationInputForBench: RingVRFInput = {
+            input: ringInput.input,
+            auxData: ringInput.auxData,
+            ringKeys: ringInput.ringKeys,
+            proverIndex: ringInput.proverIndex,
+          }
+          const verifyMs = timeMs(() => {
+            const isValid = ringVerifier.verify(
+              ringInput.ringKeys,
+              verificationInputForBench,
+              { gamma: proofResult!.gamma, proof: proofResult!.proof },
+              ringInput.auxData,
+            )
+            if (!isValid) throw new Error('Verify failed')
+          })
+          console.log(`\n--- Benchmark (${vector.comment}) ---`)
+          console.log(`  W3F: prove ${proveMs.toFixed(2)} ms, verify ${verifyMs.toFixed(2)} ms`)
+
           // ===== VRF Output Values (Exact Match Required) =====
           const actualGamma = bytesToHex(proofResult.gamma).slice(2) // Remove 0x
           const actualBeta = bytesToHex(getCommitmentFromGamma(proofResult.gamma)).slice(2) // Remove 0x

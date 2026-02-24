@@ -110,7 +110,7 @@ describe('Ring VRF End-to-End Tests (Pure TypeScript)', () => {
     const ringSize = 8
     prover = new RingVRFProver(srsFilePath, ringSize)
     verifier = new RingVRFVerifier(srsFilePath, ringSize)
-  })
+  }, 120_000)
 
   describe('Exact Value Matching Against Test Vectors', () => {
     for (const [index, vector] of RING_TEST_VECTORS.slice(0, 2).entries()) {
