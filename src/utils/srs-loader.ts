@@ -76,8 +76,10 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
   let g1PointSize: number
   let g2PointSize: number
 
-  const remainingAfterG1Compressed = srsData.length - 8 - g1Length * COMPRESSED_G1
-  const remainingAfterG1Uncompressed = srsData.length - 8 - g1Length * UNCOMPRESSED_G1
+  const remainingAfterG1Compressed =
+    srsData.length - 8 - g1Length * COMPRESSED_G1
+  const remainingAfterG1Uncompressed =
+    srsData.length - 8 - g1Length * UNCOMPRESSED_G1
 
   if (
     remainingAfterG1Uncompressed > 8 &&
@@ -85,14 +87,18 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
   ) {
     g1PointSize = UNCOMPRESSED_G1
     g2PointSize = 192
-    console.debug('[loadSRSFromFile] Detected uncompressed SRS format (G1=96, G2=192)')
+    console.debug(
+      '[loadSRSFromFile] Detected uncompressed SRS format (G1=96, G2=192)',
+    )
   } else if (
     remainingAfterG1Compressed > 8 &&
     (remainingAfterG1Compressed - 8) % 96 === 0
   ) {
     g1PointSize = COMPRESSED_G1
     g2PointSize = 96
-    console.debug('[loadSRSFromFile] Detected compressed SRS format (G1=48, G2=96)')
+    console.debug(
+      '[loadSRSFromFile] Detected compressed SRS format (G1=48, G2=96)',
+    )
   } else {
     return safeError(
       new Error(

@@ -12,8 +12,8 @@
  */
 
 import {
-  Bandersnatch,
   BANDERSNATCH_PARAMS,
+  Bandersnatch,
   BandersnatchCurve,
 } from '@pbnjam/bandersnatch'
 import { Domain } from '../plonk/domain/domain'
@@ -31,8 +31,8 @@ import {
   parseRingKeysFromArrays,
   pcsDomainSizeFromRingSize,
   piopDomainSizeFromRingSize,
-  serializeVerifierKey,
   SUITE_ID,
+  serializeVerifierKey,
 } from '../prover/ring-kzg'
 import { commitPolynomialCoeffs } from '../utils/kzg-manual'
 import { loadSRSFromFile } from '../utils/srs-loader'
@@ -235,10 +235,7 @@ export class RingVRFVerifier {
       x: this.piopParams.seed.x,
       y: this.piopParams.seed.y,
     })
-    const seedPlusResult = BandersnatchCurve.add(
-      seedPoint,
-      keyCommitmentPoint,
-    )
+    const seedPlusResult = BandersnatchCurve.add(seedPoint, keyCommitmentPoint)
 
     const domainEvals = this.piopParams.domain.evaluate(challenges.zeta)
     const piopVerifier = PiopVerifier.init(

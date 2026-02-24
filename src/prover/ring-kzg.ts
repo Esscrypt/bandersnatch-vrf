@@ -12,7 +12,11 @@
  *   verify_ring_vrf   → PlonkVerifier.restoreChallenges() → PlonkVerifier.verify()
  */
 
-import { Bandersnatch, BANDERSNATCH_PARAMS, BandersnatchCurve } from '@pbnjam/bandersnatch'
+import {
+  BANDERSNATCH_PARAMS,
+  Bandersnatch,
+  BandersnatchCurve,
+} from '@pbnjam/bandersnatch'
 import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
 import { Domain } from '../plonk/domain/domain'
 import {
@@ -23,14 +27,11 @@ import {
 import { PiopParams } from '../plonk/piop/params'
 import { PiopProver } from '../plonk/piop/prover'
 import { PiopVerifier } from '../plonk/piop/verifier'
-import { PlonkProver } from '../plonk/prover'
 import type { Proof } from '../plonk/proof'
+import { PlonkProver } from '../plonk/prover'
 import { SimplePlonkTranscript } from '../plonk/transcript/transcript'
 import { PlonkVerifier } from '../plonk/verifier'
-import {
-  bigintToBytes32BE,
-  commitPolynomialCoeffs,
-} from '../utils/kzg-manual'
+import { bigintToBytes32BE, commitPolynomialCoeffs } from '../utils/kzg-manual'
 import { loadSRSFromFile } from '../utils/srs-loader'
 import { PedersenVRFProver } from './pedersen'
 
@@ -153,11 +154,16 @@ export function serializeVerifierKey(vk: {
 }): Uint8Array {
   const buf = new Uint8Array(384)
   let offset = 0
-  buf.set(vk.pcsRawVk.g1, offset); offset += 48
-  buf.set(vk.pcsRawVk.g2, offset); offset += 96
-  buf.set(vk.pcsRawVk.tauInG2, offset); offset += 96
-  buf.set(vk.fixedColumnsCommitted.points[0], offset); offset += 48
-  buf.set(vk.fixedColumnsCommitted.points[1], offset); offset += 48
+  buf.set(vk.pcsRawVk.g1, offset)
+  offset += 48
+  buf.set(vk.pcsRawVk.g2, offset)
+  offset += 96
+  buf.set(vk.pcsRawVk.tauInG2, offset)
+  offset += 96
+  buf.set(vk.fixedColumnsCommitted.points[0], offset)
+  offset += 48
+  buf.set(vk.fixedColumnsCommitted.points[1], offset)
+  offset += 48
   buf.set(vk.fixedColumnsCommitted.ringSelector, offset)
   return buf
 }
@@ -241,14 +247,18 @@ export function deserializeProofStruct(
 
   const evalVec: bigint[] = []
   for (let i = 0; i < N_EVALUATIONS; i++) {
-    evalVec.push(bytes32BEToBigint(proofBytes.slice(offset, offset + EVALUATION_SIZE)))
+    evalVec.push(
+      bytes32BEToBigint(proofBytes.slice(offset, offset + EVALUATION_SIZE)),
+    )
     offset += EVALUATION_SIZE
   }
 
   const quotientCommitment = proofBytes.slice(offset, offset + COMMITMENT_SIZE)
   offset += COMMITMENT_SIZE
 
-  const linAtZetaOmega = bytes32BEToBigint(proofBytes.slice(offset, offset + EVALUATION_SIZE))
+  const linAtZetaOmega = bytes32BEToBigint(
+    proofBytes.slice(offset, offset + EVALUATION_SIZE),
+  )
   offset += EVALUATION_SIZE
 
   const aggAtZetaProof = proofBytes.slice(offset, offset + COMMITMENT_SIZE)
@@ -521,7 +531,8 @@ export class RingVRFProver {
       transcript,
     )
 
-    const keyCommitmentPoint = BandersnatchCurve.bytesToPoint(keyCommitmentBytes)
+    const keyCommitmentPoint =
+      BandersnatchCurve.bytesToPoint(keyCommitmentBytes)
 
     const nConstraints = PiopVerifier.N_CONSTRAINTS
     const nPolys = PiopVerifier.N_COLUMNS + 1
