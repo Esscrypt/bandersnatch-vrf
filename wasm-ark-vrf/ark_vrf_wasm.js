@@ -294,8 +294,15 @@ exports.__wbindgen_init_externref_table = function() {
     ;
 };
 
-const wasmPath = `${__dirname}/ark_vrf_wasm_bg.wasm`;
-const wasmBytes = require('fs').readFileSync(wasmPath);
+const fs = require('fs');
+const path = require('path');
+const wasmFilename = 'ark_vrf_wasm_bg.wasm';
+let wasmPath = path.join(__dirname, wasmFilename);
+if (!fs.existsSync(wasmPath)) {
+  const nextToBinary = path.join(path.dirname(process.execPath), 'wasm-ark-vrf', wasmFilename);
+  if (fs.existsSync(nextToBinary)) wasmPath = nextToBinary;
+}
+const wasmBytes = fs.readFileSync(wasmPath);
 const wasmModule = new WebAssembly.Module(wasmBytes);
 const wasm = exports.__wasm = new WebAssembly.Instance(wasmModule, imports).exports;
 
