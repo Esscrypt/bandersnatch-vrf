@@ -3,9 +3,59 @@
  * Validations and serialization (to output format) are in TypeScript.
  */
 
+import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 
 const require = createRequire(import.meta.url)
+
+/** Filesystem fallback paths for compiled bun binaries (mirrors pvm-rust-executor pattern). */
+function getRingProofNativeFallbackPaths(): string[] {
+  const execDir = dirname(process.execPath)
+  const cwd = process.cwd()
+  return [
+    join(execDir, 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(execDir, '..', 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(cwd, 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(cwd, 'packages', 'bandersnatch-vrf', 'rust-ring-proof', 'native'),
+  ]
+}
+
+interface RingProofNativeBinding {
+  proveRingProof: (
+    srsBytes: Buffer,
+    ringKeysBytes: Buffer,
+    blindingFactorBytes: Buffer,
+    proverIndex: number,
+  ) => Buffer
+  computeRingCommitment: (srsBytes: Buffer, ringKeysBytes: Buffer) => Buffer
+  verifyRingVrf: (
+    srsBytes: Buffer,
+    proofBytes: Buffer,
+    ringKeysBytes: Buffer,
+    keyCommitmentBytes: Buffer,
+  ) => boolean
+}
+
+function loadRingProofNative(): RingProofNativeBinding | null {
+  // 1. Package name (works with NODE_PATH or normal node_modules resolution)
+  try {
+    return require('pbnjam-ring-proof-native/native')
+  } catch {}
+  // 2. Relative path (works in dev when running from source)
+  try {
+    return require('../../rust-ring-proof/native')
+  } catch {}
+  // 3. Filesystem fallback (needed for compiled bun binaries in Docker)
+  for (const nativeDir of getRingProofNativeFallbackPaths()) {
+    if (existsSync(join(nativeDir, 'index.js'))) {
+      try {
+        return require(nativeDir)
+      } catch {}
+    }
+  }
+  return null
+}
 
 const KEY_SIZE = 32
 const BLINDING_FACTOR_SIZE = 32
@@ -152,21 +202,7 @@ let rustVerifyRingVrf: VerifyRingVrfRust | null = null
 let rustComputeRingCommitment: ComputeRingCommitmentRust | null = null
 
 try {
-  const native = require('../../rust-ring-proof/native') as {
-    proveRingProof: (
-      srsBytes: Buffer,
-      ringKeysBytes: Buffer,
-      blindingFactorBytes: Buffer,
-      proverIndex: number,
-    ) => Buffer
-    computeRingCommitment: (srsBytes: Buffer, ringKeysBytes: Buffer) => Buffer
-    verifyRingVrf: (
-      srsBytes: Buffer,
-      proofBytes: Buffer,
-      ringKeysBytes: Buffer,
-      keyCommitmentBytes: Buffer,
-    ) => boolean
-  }
+  const native = loadRingProofNative()
   if (native?.proveRingProof) {
     rustProveRingProof = (
       srsBytes: Uint8Array,

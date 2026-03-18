@@ -5,9 +5,55 @@
  * Falls back gracefully when the native module is not built.
  */
 
+import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 
 const require = createRequire(import.meta.url)
+
+/** Filesystem fallback paths for compiled bun binaries (mirrors pvm-rust-executor pattern). */
+function getIetfVrfNativeFallbackPaths(): string[] {
+  const execDir = dirname(process.execPath)
+  const cwd = process.cwd()
+  return [
+    join(execDir, 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(execDir, '..', 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(cwd, 'node_modules', 'pbnjam-ring-proof-native', 'native'),
+    join(cwd, 'packages', 'bandersnatch-vrf', 'rust-ring-proof', 'native'),
+  ]
+}
+
+function loadIetfVrfNative(): {
+  proveIetfVrf?: (
+    secretKeyBytes: Buffer,
+    inputBytes: Buffer,
+    auxData: Buffer,
+  ) => Buffer
+  verifyIetfVrf?: (
+    publicKeyBytes: Buffer,
+    inputBytes: Buffer,
+    proofBytes: Buffer,
+    auxData: Buffer,
+  ) => boolean
+} | null {
+  // 1. Package name (works with NODE_PATH or normal node_modules resolution)
+  try {
+    return require('pbnjam-ring-proof-native/native')
+  } catch {}
+  // 2. Relative path (works in dev when running from source)
+  try {
+    return require('../../rust-ring-proof/native')
+  } catch {}
+  // 3. Filesystem fallback (needed for compiled bun binaries in Docker)
+  for (const nativeDir of getIetfVrfNativeFallbackPaths()) {
+    if (existsSync(join(nativeDir, 'index.js'))) {
+      try {
+        return require(nativeDir)
+      } catch {}
+    }
+  }
+  return null
+}
 
 export type ProveIetfVrfRust = (
   secretKeyBytes: Uint8Array,
@@ -26,19 +72,7 @@ let rustProveIetfVrf: ProveIetfVrfRust | null = null
 let rustVerifyIetfVrf: VerifyIetfVrfRust | null = null
 
 try {
-  const native = require('../../rust-ring-proof/native') as {
-    proveIetfVrf?: (
-      secretKeyBytes: Buffer,
-      inputBytes: Buffer,
-      auxData: Buffer,
-    ) => Buffer
-    verifyIetfVrf?: (
-      publicKeyBytes: Buffer,
-      inputBytes: Buffer,
-      proofBytes: Buffer,
-      auxData: Buffer,
-    ) => boolean
-  }
+  const native = loadIetfVrfNative()
 
   if (native?.proveIetfVrf) {
     rustProveIetfVrf = (
