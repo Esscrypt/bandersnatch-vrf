@@ -22,6 +22,15 @@ ark-serialize = { version = "0.5", default-features = true, features = ["derive"
 ark-ff = { version = "0.5", default-features = true }
 w3f-pcs = { version = "0.0.2", default-features = true }
 
+# Direct deps for the vendored verify slice (src/batch/vendored) used by batch verification.
+# Pinned to the exact versions w3f-ring-proof 0.0.2 resolves so the vendored types are identical
+# to the real crate's (a VerifierKey serialized by the real index() deserializes into vendored types).
+w3f-plonk-common = { version = "=0.0.2", default-features = true }
+ark-ec = { version = "0.5", default-features = true }
+ark-poly = { version = "0.5", default-features = true }
+ark-std = { version = "0.5", default-features = true }
+ark-transcript = { version = "0.0.3", default-features = true }
+
 # ark-vrf for IETF VRF (prove + verify); bandersnatch suite.
 # 0.1.1 matches the submodule commit previously used; pulling from crates.io removes the
 # submodule path dependency so Docker and CI builds no longer need submodules/ark-vrf.

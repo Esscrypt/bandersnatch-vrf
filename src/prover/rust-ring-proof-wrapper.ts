@@ -35,6 +35,18 @@ interface RingProofNativeBinding {
     ringKeysBytes: Buffer,
     keyCommitmentBytes: Buffer,
   ) => boolean
+  computeRingVerifierKey?: (srsBytes: Buffer, ringKeysBytes: Buffer) => Buffer
+  verifyRingVrfWithKey?: (
+    vkBytes: Buffer,
+    proofBytes: Buffer,
+    keyCommitmentBytes: Buffer,
+    ringSize: number,
+  ) => boolean
+  batchVerifyRingVrf?: (
+    vkBytes: Buffer,
+    ringSize: number,
+    items: Array<{ proofBytes: Buffer; keyCommitmentBytes: Buffer }>,
+  ) => boolean
 }
 
 function loadRingProofNative(): RingProofNativeBinding | null {
@@ -198,8 +210,34 @@ export type ComputeRingCommitmentRust = (
   ringKeysBytes: Uint8Array,
 ) => Uint8Array
 
+export type ComputeRingVerifierKeyRust = (
+  srsBytes: Uint8Array,
+  ringKeysBytes: Uint8Array,
+) => Uint8Array
+
+export type VerifyRingVrfWithKeyRust = (
+  vkBytes: Uint8Array,
+  proofBytes: Uint8Array,
+  keyCommitmentBytes: Uint8Array,
+  ringSize: number,
+) => boolean
+
+export interface RingBatchItem {
+  proofBytes: Uint8Array
+  keyCommitmentBytes: Uint8Array
+}
+
+export type BatchVerifyRingVrfRust = (
+  vkBytes: Uint8Array,
+  ringSize: number,
+  items: RingBatchItem[],
+) => boolean
+
 let rustVerifyRingVrf: VerifyRingVrfRust | null = null
 let rustComputeRingCommitment: ComputeRingCommitmentRust | null = null
+let rustComputeRingVerifierKey: ComputeRingVerifierKeyRust | null = null
+let rustVerifyRingVrfWithKey: VerifyRingVrfWithKeyRust | null = null
+let rustBatchVerifyRingVrf: BatchVerifyRingVrfRust | null = null
 
 try {
   const native = loadRingProofNative()
@@ -259,6 +297,51 @@ try {
       return serializeCommitmentToOutput(out)
     }
   }
+  if (native?.computeRingVerifierKey) {
+    const fn = native.computeRingVerifierKey
+    rustComputeRingVerifierKey = (
+      srsBytes: Uint8Array,
+      ringKeysBytes: Uint8Array,
+    ): Uint8Array => {
+      validateComputeRingCommitmentInputs({ srsBytes, ringKeysBytes })
+      return new Uint8Array(
+        fn(Buffer.from(srsBytes), Buffer.from(ringKeysBytes)),
+      )
+    }
+  }
+  if (native?.verifyRingVrfWithKey) {
+    const fn = native.verifyRingVrfWithKey
+    rustVerifyRingVrfWithKey = (
+      vkBytes: Uint8Array,
+      proofBytes: Uint8Array,
+      keyCommitmentBytes: Uint8Array,
+      ringSize: number,
+    ): boolean => {
+      return fn(
+        Buffer.from(vkBytes),
+        Buffer.from(proofBytes),
+        Buffer.from(keyCommitmentBytes),
+        ringSize,
+      )
+    }
+  }
+  if (native?.batchVerifyRingVrf) {
+    const fn = native.batchVerifyRingVrf
+    rustBatchVerifyRingVrf = (
+      vkBytes: Uint8Array,
+      ringSize: number,
+      items: RingBatchItem[],
+    ): boolean => {
+      return fn(
+        Buffer.from(vkBytes),
+        ringSize,
+        items.map((it) => ({
+          proofBytes: Buffer.from(it.proofBytes),
+          keyCommitmentBytes: Buffer.from(it.keyCommitmentBytes),
+        })),
+      )
+    }
+  }
 } catch {
   // Native module not built or not available
 }
@@ -285,4 +368,16 @@ export function getRustComputeRingCommitment(): ComputeRingCommitmentRust | null
 
 export function isRustComputeRingCommitmentAvailable(): boolean {
   return rustComputeRingCommitment !== null
+}
+
+export function getRustComputeRingVerifierKey(): ComputeRingVerifierKeyRust | null {
+  return rustComputeRingVerifierKey
+}
+
+export function getRustVerifyRingVrfWithKey(): VerifyRingVrfWithKeyRust | null {
+  return rustVerifyRingVrfWithKey
+}
+
+export function getRustBatchVerifyRingVrf(): BatchVerifyRingVrfRust | null {
+  return rustBatchVerifyRingVrf
 }

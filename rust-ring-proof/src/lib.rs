@@ -5,6 +5,7 @@
 //! TypeScript handles: validations, deserialization error handling, and proof serialization.
 
 pub mod ietf;
+mod batch;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -353,4 +354,184 @@ pub fn verify_ring_vrf(
 
     let is_valid = ring_verifier.verify(proof, key_commitment);
     Ok(is_valid)
+}
+
+/// Compute the serialized ring VerifierKey once for a given (SRS, ring keys).
+/// The VerifierKey is small and ring-specific; cache it per epoch in TypeScript so the
+/// expensive index() + SRS deserialization is not repeated for every ticket.
+#[napi]
+pub fn compute_ring_verifier_key(
+    srs_bytes: Buffer,
+    ring_keys_bytes: Buffer,
+) -> Result<Buffer> {
+    let srs_bytes = srs_bytes.as_ref();
+    let ring_keys_bytes = ring_keys_bytes.as_ref();
+
+    let mut pcs_params: PcsParams =
+        PcsParams::deserialize_uncompressed_unchecked(&mut &srs_bytes[..])
+            .map_err(|e| Error::from_reason(format!("Failed to deserialize SRS: {:?}", e)))?;
+
+    const KEY_SIZE: usize = 32;
+    let ring_size = ring_keys_bytes.len() / KEY_SIZE;
+    let piop_domain_size = piop_domain_size_from_ring_size(ring_size);
+    let pcs_domain_size = pcs_domain_size_from_ring_size(ring_size);
+
+    if pcs_params.powers_in_g1.len() < pcs_domain_size || pcs_params.powers_in_g2.len() < 2 {
+        return Err(Error::from_reason(format!(
+            "SRS too small: need powers_in_g1.len() >= {} and powers_in_g2.len() >= 2",
+            pcs_domain_size
+        )));
+    }
+    pcs_params.powers_in_g1.truncate(pcs_domain_size);
+    pcs_params.powers_in_g2.truncate(2);
+
+    let padding_point = EdwardsAffine::deserialize_compressed_unchecked(&PADDING_POINT_BYTES[..])
+        .expect("Padding point is valid");
+    let mut ring_keys = Vec::with_capacity(ring_size);
+    for i in 0..ring_size {
+        let key_bytes = &ring_keys_bytes[i * KEY_SIZE..(i + 1) * KEY_SIZE];
+        let is_null = key_bytes.iter().all(|&b| b == 0);
+        let key = if is_null {
+            padding_point
+        } else {
+            EdwardsAffine::deserialize_compressed_unchecked(key_bytes).unwrap_or(padding_point)
+        };
+        ring_keys.push(key);
+    }
+
+    let domain = Domain::new(piop_domain_size, true);
+    let h = bandersnatch_blinding_base();
+    let seed = bandersnatch_accumulator_base();
+    let padding = bandersnatch_padding();
+    let ring_piop_params = RingPiopParams::setup(domain, h, seed, padding);
+    let max_ring_size = max_ring_size_from_piop_domain(piop_domain_size);
+    let keys_for_index: &[EdwardsAffine] = if ring_keys.len() <= max_ring_size {
+        &ring_keys[..]
+    } else {
+        &ring_keys[..max_ring_size]
+    };
+
+    let (_prover_key, verifier_key): (_, RingVerifierKey<Fq, KZG<Bls12_381>>) =
+        w3f_ring_proof::index::<_, KZG<Bls12_381>, _>(&pcs_params, &ring_piop_params, keys_for_index);
+
+    let mut out = Vec::new();
+    verifier_key
+        .serialize_compressed(&mut out)
+        .map_err(|e| Error::from_reason(format!("Failed to serialize VerifierKey: {:?}", e)))?;
+    Ok(out.into())
+}
+
+/// Verify a single ring proof using a precomputed serialized VerifierKey.
+/// No SRS deserialization, no index() — only the cheap piop setup + verify.
+#[napi]
+pub fn verify_ring_vrf_with_key(
+    vk_bytes: Buffer,
+    proof_bytes: Buffer,
+    key_commitment_bytes: Buffer,
+    ring_size: u32,
+) -> Result<bool> {
+    let verifier_key: RingVerifierKey<Fq, KZG<Bls12_381>> =
+        RingVerifierKey::deserialize_compressed(vk_bytes.as_ref())
+            .map_err(|e| Error::from_reason(format!("Failed to deserialize VerifierKey: {:?}", e)))?;
+
+    let proof: W3fRingProof<Fq, KZG<Bls12_381>> =
+        W3fRingProof::deserialize_compressed(proof_bytes.as_ref())
+            .map_err(|e| Error::from_reason(format!("Failed to deserialize proof: {:?}", e)))?;
+
+    let key_commitment = EdwardsAffine::deserialize_compressed(key_commitment_bytes.as_ref())
+        .map_err(|e| Error::from_reason(format!("Failed to deserialize key commitment: {:?}", e)))?;
+
+    let piop_domain_size = piop_domain_size_from_ring_size(ring_size as usize);
+    let domain = Domain::new(piop_domain_size, true);
+    let h = bandersnatch_blinding_base();
+    let seed = bandersnatch_accumulator_base();
+    let padding = bandersnatch_padding();
+    let ring_piop_params = RingPiopParams::setup(domain, h, seed, padding);
+
+    let transcript = RingArkTranscript::new(SUITE_ID);
+    let ring_verifier = RingVerifier::init(verifier_key, ring_piop_params, transcript);
+    Ok(ring_verifier.verify(proof, key_commitment))
+}
+
+/// A single ring proof awaiting batch verification (shares one ring/VerifierKey with the others).
+#[napi(object)]
+pub struct RingBatchItem {
+    pub proof_bytes: Buffer,
+    pub key_commitment_bytes: Buffer,
+}
+
+/// Verify many ring proofs that share one ring (VerifierKey) in a single aggregated pairing check.
+///
+/// Each proof's two KZG openings are reconstructed (no pairing) via the vendored verifier, then all
+/// openings across all proofs are random-linear-combined (Fiat-Shamir coefficients over the openings,
+/// first coefficient pinned to 1) into one accumulated opening and checked with a single
+/// `multi_pairing`. Equivalent accept/reject to verifying each proof singly, at ~2 pairings total
+/// instead of 2 per proof. Returns false if any proof is invalid.
+#[napi]
+pub fn batch_verify_ring_vrf(
+    vk_bytes: Buffer,
+    ring_size: u32,
+    items: Vec<RingBatchItem>,
+) -> Result<bool> {
+    use crate::batch::vendored::piop::params::PiopParams as VendoredPiopParams;
+    use crate::batch::vendored::piop::VerifierKey as VendoredVerifierKey;
+    use crate::batch::vendored::ring_verifier::RingVerifier as VendoredRingVerifier;
+    use crate::batch::vendored::ArkTranscript as VendoredArkTranscript;
+    use crate::batch::vendored::RingProof as VendoredRingProof;
+    use ark_ff::One;
+    use w3f_pcs::pcs::RawVerifierKey;
+
+    if items.is_empty() {
+        return Ok(true);
+    }
+
+    let verifier_key: VendoredVerifierKey<Fq, KZG<Bls12_381>> =
+        VendoredVerifierKey::deserialize_compressed(vk_bytes.as_ref())
+            .map_err(|e| Error::from_reason(format!("Failed to deserialize VerifierKey: {:?}", e)))?;
+    let kzg_vk = verifier_key.pcs_raw_vk.prepare();
+
+    let piop_domain_size = piop_domain_size_from_ring_size(ring_size as usize);
+    let domain = Domain::new(piop_domain_size, true);
+    let ring_piop_params: VendoredPiopParams<Fq, _> = VendoredPiopParams::setup(
+        domain,
+        bandersnatch_blinding_base(),
+        bandersnatch_accumulator_base(),
+        bandersnatch_padding(),
+    );
+    let transcript = VendoredArkTranscript::new(SUITE_ID);
+    let ring_verifier = VendoredRingVerifier::init(verifier_key, ring_piop_params, transcript);
+
+    let mut all_openings = Vec::with_capacity(items.len() * 2);
+    for item in &items {
+        let proof: VendoredRingProof<Fq, KZG<Bls12_381>> =
+            VendoredRingProof::deserialize_compressed(item.proof_bytes.as_ref())
+                .map_err(|e| Error::from_reason(format!("Failed to deserialize proof: {:?}", e)))?;
+        let kc = EdwardsAffine::deserialize_compressed(item.key_commitment_bytes.as_ref())
+            .map_err(|e| Error::from_reason(format!("Failed to deserialize key commitment: {:?}", e)))?;
+        let [op0, op1] = ring_verifier.openings_for(proof, kc);
+        all_openings.push(op0);
+        all_openings.push(op1);
+    }
+
+    // Fiat-Shamir batching coefficients over all openings; first coefficient is 1.
+    let mut t = ark_transcript::Transcript::new_labeled(b"pbnjam_ring_batch_v1".as_slice());
+    for op in &all_openings {
+        t.append(&op.c);
+        t.append(&op.x);
+        t.append(&op.y);
+        t.append(&op.proof);
+    }
+    let mut reader = t.challenge(b"coeffs".as_slice());
+    let coeffs: Vec<Fq> = (0..all_openings.len())
+        .map(|i| {
+            if i == 0 {
+                Fq::one()
+            } else {
+                reader.read_reduce::<Fq>()
+            }
+        })
+        .collect();
+
+    let acc = KZG::<Bls12_381>::accumulate(all_openings, &coeffs, &kzg_vk);
+    Ok(KZG::<Bls12_381>::verify_accumulated(acc, &kzg_vk))
 }

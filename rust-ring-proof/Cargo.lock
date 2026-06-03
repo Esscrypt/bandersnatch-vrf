@@ -524,14 +524,19 @@ name = "pbnjam-ring-proof"
 version = "0.1.0"
 dependencies = [
  "ark-bls12-381",
+ "ark-ec",
  "ark-ed-on-bls12-381-bandersnatch",
  "ark-ff",
+ "ark-poly",
  "ark-serialize",
+ "ark-std",
+ "ark-transcript",
  "ark-vrf",
  "napi",
  "napi-build",
  "napi-derive",
  "w3f-pcs 0.0.2",
+ "w3f-plonk-common 0.0.2",
  "w3f-ring-proof 0.0.2",
 ]
 
