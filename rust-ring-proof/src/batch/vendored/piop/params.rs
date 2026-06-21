@@ -8,32 +8,32 @@ use w3f_plonk_common::gadgets::ec::AffineColumn;
 
 use crate::batch::vendored::piop::FixedColumns;
 
-/// Plonk Interactive Oracle Proofs (PIOP) parameters.
+
 #[derive(Clone)]
 pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
-    /// Domain over which the piop is represented.
+    
     pub(crate) domain: Domain<F>,
-    /// Number of bits used to represent a jubjub scalar.
+    
     pub(crate) scalar_bitlen: usize,
-    /// Length of the part of the column representing the public keys (including the padding).
+    
     pub keyset_part_size: usize,
-    /// Blinding base point.
+    
     pub(crate) h: Affine<Curve>,
-    /// Summation base point.
+    
     pub(crate) seed: Affine<Curve>,
-    /// The point used to pad the list of public keys.
+    
     pub(crate) padding: Affine<Curve>,
 }
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
-    /// Initialize PIOP parameters.
+    
     ///
-    /// - `domain`: polynomials evaluation domain.
-    /// - `h`: Blinding base point.
-    /// - `seed`: Accumulation base point
-    /// - `padding`: The point used to pad the list of public keys.
+    
+    
+    
+    
     ///
-    /// All points should be of an unknown discrete log.
+    
     pub fn setup(
         domain: Domain<F>,
         h: Affine<Curve>,

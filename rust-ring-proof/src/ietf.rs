@@ -20,15 +20,15 @@ use ark_vrf::{
 const GAMMA_LEN: usize = 32;
 const PROOF_TOTAL_LEN: usize = 96; // gamma (32) + c (32) + s (32)
 
-/// Prove IETF VRF (RFC-9381) using ark-vrf BandersnatchSha512Ell2.
+
 ///
-/// # Arguments (pre-validated in TypeScript)
-/// * `secret_key_bytes` - Secret scalar (32 bytes, little-endian Fr)
-/// * `input_bytes` - Raw VRF input data (hashed to curve internally via Elligator2)
-/// * `aux_data` - Additional data bound to the proof (may be empty)
+
+
+
+
 ///
-/// # Returns
-/// 96 bytes: gamma (32) || c (32) || s (32)
+
+
 #[napi]
 pub fn prove_ietf_vrf(
     secret_key_bytes: Buffer,
@@ -63,16 +63,16 @@ pub fn prove_ietf_vrf(
     Ok(result.into())
 }
 
-/// Verify IETF VRF proof (RFC-9381) using ark-vrf BandersnatchSha512Ell2.
+
 ///
-/// # Arguments (pre-validated in TypeScript)
-/// * `public_key_bytes` - Public key point (32 bytes, compressed)
-/// * `input_bytes` - Raw VRF input data (hashed to curve internally via Elligator2)
-/// * `proof_bytes` - 96-byte proof: gamma (32) || c (32) || s (32)
-/// * `aux_data` - Additional data bound to the proof (may be empty)
+
+
+
+
+
 ///
-/// # Returns
-/// `true` if proof is valid, `false` otherwise.
+
+
 #[napi]
 pub fn verify_ietf_vrf(
     public_key_bytes: Buffer,

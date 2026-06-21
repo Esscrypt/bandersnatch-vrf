@@ -90,12 +90,12 @@ where
     E: Pairing,
     Jubjub: TECurveConfig<BaseField = E::ScalarField>,
 {
-    /// Reproduce `verify()` up to the two KZG openings, returning them instead of performing the
-    /// pairing. Identical math to the upstream verify (same challenges, same aggregation); only the
-    /// final `CS::batch_verify` is omitted 
-    /// 
-    /// so the openings can be accumulated across many proofs and
-    /// checked with a single multi-pairing. `result` is the VRF output point (gamma).
+    
+    
+    
+    
+    
+    
     pub fn openings_for(
         &self,
         proof: RingProof<E::ScalarField, KZG<E>>,

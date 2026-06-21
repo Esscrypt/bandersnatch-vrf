@@ -19,16 +19,16 @@ use ark_vrf::{
     Public, Suite,
 };
 
-/// Compute ring commitment (FixedColumnsCommitted) from ring keys.
-/// This matches ark-vrf's RingProofParams::verifier_key().commitment() functionality.
+
+
 ///
-/// # Arguments
-/// * `srs_bytes` - Serialized PCS params (SRS) bytes (uncompressed arkworks format)
-/// * `ring_keys_bytes` - Serialized ring public keys (compressed, 32 bytes each)
-/// * `ring_size` - Number of keys in the ring
+
+
+
+
 ///
-/// # Returns
-/// * Serialized FixedColumnsCommitted (144 bytes: cx, cy, selector, each 48 bytes)
+
+
 #[wasm_bindgen]
 pub fn compute_ring_commitment(
     srs_bytes: &[u8],
@@ -102,20 +102,20 @@ pub fn compute_ring_commitment(
     Ok(result)
 }
 
-/// Generate a ring proof using ark-vrf (matches test vectors exactly).
+
 ///
-/// This function uses ark-vrf's RingProver which matches the exact implementation
-/// used to generate the test vectors.
+
+
 ///
-/// # Arguments
-/// * `srs_bytes` - Serialized PCS params (SRS) bytes (uncompressed arkworks format)
-/// * `ring_keys_bytes` - Serialized ring public keys (compressed, 32 bytes each)
-/// * `blinding_factor_bytes` - Serialized blinding factor (32 bytes, Fr scalar)
-/// * `prover_index` - Index of the prover's key in the ring (0-based)
-/// * `ring_size` - Number of keys in the ring
+
+
+
+
+
+
 ///
-/// # Returns
-/// * Serialized RingProof (matches test vectors exactly)
+
+
 #[wasm_bindgen]
 pub fn prove_ring_proof(
     srs_bytes: &[u8],
@@ -188,17 +188,17 @@ pub fn prove_ring_proof(
     Ok(proof_bytes)
 }
 
-/// Verify a ring proof using ark-vrf.
+
 ///
-/// # Arguments
-/// * `srs_bytes` - Serialized PCS params (SRS) bytes (uncompressed arkworks format)
-/// * `proof_bytes` - Serialized RingProof
-/// * `ring_keys_bytes` - Serialized ring public keys (compressed, 32 bytes each)
-/// * `key_commitment_bytes` - Serialized key commitment (Y_bar from Pedersen proof, compressed, 32 bytes)
-/// * `ring_size` - Number of keys in the ring
+
+
+
+
+
+
 ///
-/// # Returns
-/// * `true` if proof is valid, `false` otherwise
+
+
 #[wasm_bindgen]
 pub fn verify_ring_proof(
     srs_bytes: &[u8],
@@ -270,17 +270,17 @@ pub fn verify_ring_proof(
     Ok(is_valid)
 }
 
-/// Verify an IETF VRF proof using ark-vrf (RFC-9381).
+
 ///
-/// # Arguments
-/// * `public_key_bytes` - Public key point (32 bytes, compressed)
-/// * `input_point_bytes` - VRF input point alpha / H (32 bytes, compressed)
-/// * `output_point_bytes` - VRF output point gamma (32 bytes, compressed)
-/// * `proof_bytes` - IETF proof (64 bytes: c || s, both little-endian)
-/// * `aux_data` - Additional data bound to the proof
+
+
+
+
+
+
 ///
-/// # Returns
-/// * `true` if proof is valid, `false` otherwise
+
+
 #[wasm_bindgen]
 pub fn verify_ietf_vrf(
     public_key_bytes: &[u8],

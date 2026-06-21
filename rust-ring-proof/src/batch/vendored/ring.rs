@@ -17,36 +17,36 @@ use crate::batch::vendored::PiopParams;
 
 const IDLE_ROWS: usize = ZK_ROWS + 1;
 
-/// Commitment to a list of VRF public keys as is used as a public input to the ring proof SNARK verifier.
+
 ///
-/// The VRF keys are (inner) curve points that we represent in the affine Twisted Edwards coordinates.
-/// We commit to the coordinate vectors independently using KZG on the outer curve. To make the commitment
-/// updatable we use SRS in the Lagrangian form: `L1, ..., Ln`, where `Li = L_i(t)G`.
-/// The commitment to a vector `a1, ..., an` is then `a1L1 + ... + anLn`.
+
+
+
+
 ///
-/// We pad the list of keys with a `padding` point with unknown dlog up to a certain size.
-/// Additionally, to make the commitment compatible with the snark,
-/// we append the power-of-2 powers of the VRF blinding Pedersen base
-/// `H, 2H, 4H, ..., 2^(s-1)H`, where `s` is the bitness of the VRF curve scalar field.
-/// The last `IDLE_ROWS = 4` elements are set to `(0, 0)`.
+
+
+
+
+
 ///
-/// Thus, the vector of points we commit to coordinatewise is
-/// `pk1, ..., pkn, padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`
+
+
 #[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Ring<
     F: PrimeField,
     KzgCurve: Pairing<ScalarField = F>,
     VrfCurveConfig: TECurveConfig<BaseField = F>,
 > {
-    /// KZG commitment to the x coordinates of the described vector.
+    
     pub cx: KzgCurve::G1Affine,
-    /// KZG commitment to the y coordinates of the described vector.
+    
     pub cy: KzgCurve::G1Affine,
-    /// KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
+    
     pub selector: KzgCurve::G1Affine,
-    /// Maximal number of keys the commitment can "store". For domain of size `N` it is `N - (s + IDLE_ROWS)`.
+    
     pub max_keys: usize,
-    /// Number of keys "stored" in this commitment.
+    
     pub curr_keys: usize,
     // Padding point.
     pub padding: Affine<VrfCurveConfig>,
@@ -73,17 +73,17 @@ impl<
         VrfCurveConfig: TECurveConfig<BaseField = F>,
     > Ring<F, KzgCurve, VrfCurveConfig>
 {
-    /// Builds the commitment to the vector
-    /// `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
+    
+    
     ///
-    /// We compute it as a sum of commitments of 2 vectors:
-    /// `padding, ..., padding`, and
-    /// `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
-    /// The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
+    
+    
+    
+    
     ///
-    /// - `piop_params`: SNARK parameters
-    /// - `srs`: Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
-    /// - `g`: Generator used in the SRS
+    
+    
+    
     pub fn empty(
         piop_params: &PiopParams<F, VrfCurveConfig>,
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
@@ -124,10 +124,10 @@ impl<
         }
     }
 
-    /// Appends a set key sequence to the ring.
+    
     ///
-    /// - `keys`: Keys to append.
-    /// - `srs`: Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
+    
+    
     pub fn append(
         &mut self,
         keys: &[Affine<VrfCurveConfig>],
@@ -155,12 +155,12 @@ impl<
         self.curr_keys = new_size;
     }
 
-    /// Builds the ring from the keys provided with 2 MSMs of size `keys.len() + scalar_bitlen + 5`.
+    
     ///
-    /// In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
+    
     ///
-    /// - `piop_params`: SNARK parameters.
-    /// - `srs`: full-size Lagrangian SRS.
+    
+    
     pub fn with_keys(
         piop_params: &PiopParams<F, VrfCurveConfig>,
         keys: &[Affine<VrfCurveConfig>],

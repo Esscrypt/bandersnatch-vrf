@@ -216,7 +216,7 @@ const getCommitBench = bench('getCommitmentFromGamma (64-byte)', () => {
   getCommitmentFromGamma(gammaBytes)
 })
 const pointToHashBench = bench('pointToHashRfc9381', () => {
-  pointToHashRfc9381(gammaBytes, false)
+  pointToHashRfc9381(gammaBytes)
 })
 console.log()
 

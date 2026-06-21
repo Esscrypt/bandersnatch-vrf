@@ -14,13 +14,14 @@ import type {
   RefineContext,
   RefineLoad,
   Safe,
-  WorkExecResultValue,
+  WorkError,
+  WorkExecutionResult,
   WorkPackageSpec,
   WorkReport,
   WorkResult,
 } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
-import { concatBytes, type Hex, hexToBytes } from './core'
+import { concatBytes, hexToBytes } from './core'
 
 /** @internal Gray Paper Equation 30-38: encode natural number. */
 function encodeNatural(value: bigint): Safe<Uint8Array> {
@@ -132,54 +133,27 @@ function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-/** @internal Encode work execution result (ok blob, out_of_gas, panic, bad_exports, etc.). */
+// Work-error discriminators (0 is reserved for a successful output blob). Mirrors the canonical
+// encoder in @pbnjam/codec; kept local to avoid a cross-package dependency.
+const WORK_ERROR_DISCRIMINATOR: Record<WorkError, number> = {
+  OOG: 1,
+  PANIC: 2,
+  BADEXPORTS: 3,
+  OVERSIZE: 4,
+  BAD: 5,
+  BIG: 6,
+}
+
+/** @internal Encode a work execution result: a success output blob, or a work error. */
 function encodeWorkExecutionResult(
-  result: WorkExecResultValue,
+  result: WorkExecutionResult,
 ): Safe<Uint8Array> {
-  if (typeof result === 'string') {
-    if (result.startsWith('0x')) {
-      const resultBytes = hexToBytes(result as Hex)
-      const [error, lengthEncoded] = encodeNatural(BigInt(resultBytes.length))
-      if (error) return safeError(error)
-      return safeResult(
-        concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]),
-      )
-    }
-    switch (result) {
-      case 'out_of_gas':
-        return safeResult(new Uint8Array([1]))
-      case 'bad_exports':
-        return safeResult(new Uint8Array([3]))
-      case 'oversize':
-        return safeResult(new Uint8Array([4]))
-      case 'bad_code':
-        return safeResult(new Uint8Array([5]))
-      case 'code_oversize':
-        return safeResult(new Uint8Array([6]))
-      default:
-        return safeError(new Error(`Unknown error string: ${result}`))
-    }
+  if (result instanceof Uint8Array) {
+    const [error, lengthEncoded] = encodeNatural(BigInt(result.length))
+    if (error) return safeError(error)
+    return safeResult(concatBytes([new Uint8Array([0]), lengthEncoded, result]))
   }
-  if (typeof result === 'object' && result !== null) {
-    if ('ok' in result && typeof result.ok === 'string') {
-      const resultBytes = hexToBytes(result.ok)
-      const [error, lengthEncoded] = encodeNatural(BigInt(resultBytes.length))
-      if (error) return safeError(error)
-      return safeResult(
-        concatBytes([new Uint8Array([0]), lengthEncoded, resultBytes]),
-      )
-    }
-    if ('panic' in result) return safeResult(new Uint8Array([2]))
-    if ('out_of_gas' in result) return safeResult(new Uint8Array([1]))
-    if ('bad_exports' in result) return safeResult(new Uint8Array([3]))
-    if ('output_oversize' in result) return safeResult(new Uint8Array([4]))
-    if ('bad_code' in result) return safeResult(new Uint8Array([5]))
-    if ('code_oversize' in result) return safeResult(new Uint8Array([6]))
-    return safeError(
-      new Error(`Unknown result object: ${JSON.stringify(result)}`),
-    )
-  }
-  return safeError(new Error(`Invalid result type: ${typeof result}`))
+  return safeResult(new Uint8Array([WORK_ERROR_DISCRIMINATOR[result]]))
 }
 
 /** @internal Gray Paper Equation 216-229: work result encoding. */

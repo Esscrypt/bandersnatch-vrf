@@ -18,7 +18,7 @@ pub mod ring_verifier;
 
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
-/// Polynomial Commitment Schemes.
+
 pub use w3f_pcs::pcs;
 
 #[derive(Clone)]

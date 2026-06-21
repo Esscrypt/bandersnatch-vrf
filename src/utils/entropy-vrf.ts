@@ -42,8 +42,8 @@ import {
   IETFVRFProver,
   type IETFVRFVerifier,
   type IETFVRFVerifierWasm,
-  pointToHashRfc9381,
 } from '@pbnjam/bandersnatch-vrf'
+import { getCommitmentFromGamma } from './gamma'
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { bytesToHex } from 'viem'
@@ -237,7 +237,7 @@ export function banderout(sealSignature: Uint8Array): Safe<Uint8Array> {
   // Bandersnatch VRF spec section 1.6: o ← output_to_hash(O) where O is the VRF output point
   // This implements the "proof-to-hash with focus on output point component" as specified
   // RFC-9381 Section 5.4.2.3: str_1 = str_0 || point_to_string(P)
-  const vrfOutputHash = pointToHashRfc9381(gamma, false)
+  const vrfOutputHash = getCommitmentFromGamma(gamma)
 
   // Gray Paper: banderout returns first 32 bytes of the VRF output hash
   // Bandersnatch VRF spec: The output is a fixed-length octet string (we take first 32 bytes)

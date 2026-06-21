@@ -21,7 +21,7 @@ import {
   elligator2HashToCurve,
 } from '../crypto/elligator2'
 import { generateNonceRfc8032 } from '../crypto/nonce-rfc8032'
-import { pointToHashRfc9381 } from '../crypto/rfc9381'
+import { getCommitmentFromGamma } from '../utils/gamma'
 
 /**
  * Pedersen VRF proof structure according to bandersnatch-vrf-spec
@@ -386,8 +386,7 @@ export class PedersenVRFProver {
    * Hash VRF output point (H2 function)
    */
   private static hashOutput(gamma: Uint8Array): Uint8Array {
-    // Use RFC-9381 point-to-hash procedure (same as IETF VRF)
-    return pointToHashRfc9381(gamma, false)
+    return getCommitmentFromGamma(gamma)
   }
 
   /**

@@ -94,15 +94,7 @@ export function verifyAnnouncementSignature(
   // Step 4: Verify the Ed25519 signature
   const signatureBytes = hexToBytes(announcement.announcement.signature)
 
-  const [verifyError, isValid] = verifyEd25519(
-    message,
-    signatureBytes,
-    validatorPublicKey,
-  )
-  if (verifyError) {
-    return safeError(verifyError)
-  }
-  return safeResult(isValid)
+  return verifyEd25519(message, signatureBytes, validatorPublicKey)
 }
 
 /**

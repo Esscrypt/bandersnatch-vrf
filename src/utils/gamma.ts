@@ -24,19 +24,11 @@ export function getCommitmentFromGamma(gamma: Uint8Array): Uint8Array {
     throw new Error(`Gamma must be 32 bytes, got ${gamma.length}`)
   }
 
-  return pointToHashRfc9381(gamma, false)
+  return pointToHashRfc9381(gamma)
 }
 
 /**
- * Get the banderout (first 32 bytes) from gamma according to Gray Paper
- *
- * Gray Paper definition: \banderout{p \in \bsringproof{r}{c}{m}} \in \hash \equiv \text{output}(x \mid x \in \bsringproof{r}{c}{m})\interval{}{32}
- *
- * This is the standard VRF output identifier used for ticket IDs and other identifiers
- * that need to be 32 bytes rather than the full 64-byte hash.
- *
- * @param gamma - The VRF output point (32 bytes)
- * @returns The banderout (first 32 bytes of the hash commitment)
+ * Get the banderout (first 32 bytes) from gamma
  */
 export function getBanderoutFromGamma(gamma: Uint8Array): Uint8Array {
   const fullHash = getCommitmentFromGamma(gamma)

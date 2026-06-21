@@ -458,23 +458,17 @@ export function verifyBandersnatchVRFEvidence(
 
   if (announcement.tranche === 0n) {
     // Verify tranche 0 evidence using our audit signature verification
-    const [error, isValid] = verifyTranche0AuditSignature(
+    return verifyTranche0AuditSignature(
       announcerBandersnatchPublicKey,
       announcement.evidence,
       blockHeaderVrfOutput,
       verifier,
     )
-
-    if (error) {
-      return safeError(error)
-    }
-
-    return safeResult(isValid)
   } else {
     // For tranche N, we need to verify against each work report
 
     // Verify tranche N evidence using our audit signature verification
-    const [error, isValid] = verifyTrancheNAuditSignature(
+    return verifyTrancheNAuditSignature(
       announcerBandersnatchPublicKey,
       announcement.evidence,
       blockHeaderVrfOutput,
@@ -482,12 +476,6 @@ export function verifyBandersnatchVRFEvidence(
       announcement.tranche,
       verifier,
     )
-
-    if (error) {
-      return safeError(error)
-    }
-
-    return safeResult(isValid)
   }
 }
 
