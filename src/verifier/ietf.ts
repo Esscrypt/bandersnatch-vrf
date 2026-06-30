@@ -56,15 +56,8 @@ export class IETFVRFVerifier {
     auxData?: Uint8Array,
   ): boolean {
     // 1. Hash input to curve point (H1)
-    // According to RFC-9381: ECVRF_encode_to_curve receives salt || alpha
-    // Even though encode_to_curve_salt is empty, we concatenate for consistency
-    const salt = new Uint8Array(0) // Empty salt as per spec section 2.1
-    const h2cData = new Uint8Array(salt.length + input.length)
-    h2cData.set(salt, 0)
-    h2cData.set(input, salt.length)
-
-    // Use the same hashToCurve method as the prover for consistency
-    const alphaBytes = IETFVRFProver.hashToCurve(h2cData)
+    // Empty salt per spec section 2.1: h2c_data = salt || alpha === alpha
+    const alphaBytes = IETFVRFProver.hashToCurve(input)
 
     // 2. Verify proof
     const isValid = this.verifyProof(publicKey, alphaBytes, proof, auxData)

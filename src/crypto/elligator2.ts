@@ -69,6 +69,12 @@ export function bytesToBigIntBigEndian(bytes: Uint8Array): bigint {
  * Noble Edwards curve instance for Bandersnatch
  * Used for native Noble operations with arkworks compatibility
  */
+const ECVRF_HASH_TO_FIELD_DST = new TextEncoder().encode(
+  'ECVRF_Bandersnatch_XMD:SHA-512_ELL2_RO_Bandersnatch_SHA-512_ELL2',
+)
+const H2C_OVERSIZE_DST_PREFIX = new TextEncoder().encode('H2C-OVERSIZE-DST-')
+const ARKWORKS_EXPAND_Z_PAD = new Uint8Array(48)
+
 const Bandersnatch = edwards({
   p: BANDERSNATCH_PARAMS.FIELD_MODULUS,
   n: BANDERSNATCH_PARAMS.CURVE_ORDER,
@@ -210,8 +216,7 @@ function arkworksExpandMessageXmd(
 
   // Handle long DST (same as Noble)
   if (DST.length > 255) {
-    const longDstPrefix = new TextEncoder().encode('H2C-OVERSIZE-DST-')
-    DST = sha512(concatBytes(longDstPrefix, DST))
+    DST = sha512(concatBytes(H2C_OVERSIZE_DST_PREFIX, DST))
   }
 
   const b_in_bytes = 64 // SHA-512 output size
@@ -221,14 +226,12 @@ function arkworksExpandMessageXmd(
 
   const DST_prime = concatBytes(DST, i2osp(DST.length, 1))
 
-  // KEY DIFFERENCE: Use arkworks block_size (48 bytes) instead of SHA-512 block size (128 bytes)
-  const ARKWORKS_BLOCK_SIZE = 48 // len_per_base_elem for Bandersnatch with SEC_PARAM=128
-  const Z_pad = new Uint8Array(ARKWORKS_BLOCK_SIZE) // All zeros
-
   const l_i_b_str = i2osp(lenInBytes, 2)
 
   // Calculate b_0
-  const b_0 = sha512(concatBytes(Z_pad, msg, l_i_b_str, i2osp(0, 1), DST_prime))
+  const b_0 = sha512(
+    concatBytes(ARKWORKS_EXPAND_Z_PAD, msg, l_i_b_str, i2osp(0, 1), DST_prime),
+  )
 
   // Calculate b_1
   const b = new Array<Uint8Array>(ell)
@@ -253,11 +256,6 @@ function arkworksExpandMessageXmd(
  * @returns Two field elements (for uniform mapping like arkworks)
  */
 export function hashToField(message: Uint8Array): [bigint, bigint] {
-  // DST construction matching arkworks exactly
-  const h2cSuiteId = 'Bandersnatch_XMD:SHA-512_ELL2_RO_'
-  const suiteString = 'Bandersnatch_SHA-512_ELL2'
-  const DST = `ECVRF_${h2cSuiteId}${suiteString}`
-
   // Calculate parameters like arkworks
   const MODULUS_BIT_SIZE = 255 // Bandersnatch field modulus bit size
   const SEC_PARAM = 128
@@ -272,7 +270,11 @@ export function hashToField(message: Uint8Array): [bigint, bigint] {
   const len_in_bytes = N * m * len_per_base_elem
 
   // Use our arkworks-compatible expand_message_xmd
-  const uniform_bytes = arkworksExpandMessageXmd(message, DST, len_in_bytes)
+  const uniform_bytes = arkworksExpandMessageXmd(
+    message,
+    ECVRF_HASH_TO_FIELD_DST,
+    len_in_bytes,
+  )
 
   // Extract field elements like arkworks (big-endian interpretation with modular reduction)
   const u1_bytes = uniform_bytes.slice(0, len_per_base_elem)

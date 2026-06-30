@@ -14,6 +14,7 @@ import {
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
 import { hexToBytes } from 'viem'
+import { bytesToBigInt } from 'viem/utils'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
 import {
   bytesToBigIntLittleEndian,
@@ -21,7 +22,10 @@ import {
   elligator2HashToCurve,
 } from '../crypto/elligator2'
 import { generateNonceRfc8032 } from '../crypto/nonce-rfc8032'
+import { generateChallengeRfc9381, SUITE_BYTES } from '../crypto/rfc9381'
 import { getCommitmentFromGamma } from '../utils/gamma'
+
+const PEDERSEN_BLINDING_TAG = 0xcc
 
 /**
  * Pedersen VRF proof structure according to bandersnatch-vrf-spec
@@ -91,35 +95,34 @@ export class PedersenVRFProver {
     inputPoint: Uint8Array,
     auxData?: Uint8Array,
   ): Uint8Array {
-    // This matches the ark-vrf PedersenSuite::blinding implementation
-    const SUITE_ID = new TextEncoder().encode('Bandersnatch_SHA-512_ELL2')
-    const DOM_SEP_START = 0xcc
-    const DOM_SEP_END = 0x00
-
-    let buf = new Uint8Array([...SUITE_ID, DOM_SEP_START])
-
-    // Add scalar (secret key) in little-endian format (arkworks style)
-    buf = new Uint8Array([...buf, ...secretKey])
-
-    // Add point (input point)
-    buf = new Uint8Array([...buf, ...inputPoint])
-
-    // Add additional data
+    const auxLen = auxData?.length ?? 0
+    const buf = new Uint8Array(
+      SUITE_BYTES.length +
+        1 +
+        secretKey.length +
+        inputPoint.length +
+        auxLen +
+        1,
+    )
+    let offset = 0
+    buf.set(SUITE_BYTES, offset)
+    offset += SUITE_BYTES.length
+    buf[offset++] = PEDERSEN_BLINDING_TAG
+    buf.set(secretKey, offset)
+    offset += secretKey.length
+    buf.set(inputPoint, offset)
+    offset += inputPoint.length
     if (auxData) {
-      buf = new Uint8Array([...buf, ...auxData])
+      buf.set(auxData, offset)
+      offset += auxData.length
     }
+    buf[offset] = 0x00
 
-    // Add domain separator end
-    buf = new Uint8Array([...buf, DOM_SEP_END])
-
-    // Hash and convert to scalar with big-endian interpretation (arkworks style)
     const hash = sha512(buf)
-    let hashValue = BigInt(0)
-    for (let i = 0; i < hash.length; i++) {
-      hashValue = (hashValue << 8n) | BigInt(hash[i])
-    }
-
-    const blindingScalar = mod(hashValue, BandersnatchCurve.CURVE_ORDER)
+    const blindingScalar = mod(
+      bytesToBigInt(hash),
+      BandersnatchCurve.CURVE_ORDER,
+    )
     return numberToBytesLittleEndian(blindingScalar)
   }
 
@@ -291,10 +294,6 @@ export class PedersenVRFProver {
   }
 
   /**
-   * Generate challenge c = H2(Y_bar, I, O, R, O_k, ad) using RFC-9381 format
-   * Matches arkworks challenge_rfc_9381 implementation
-   */
-  /**
    * Generate challenge c = H2(Y_bar, I, O, R, O_k, ad)
    * Made public so verifier can reuse the same implementation
    */
@@ -306,40 +305,10 @@ export class PedersenVRFProver {
     O_k: Uint8Array,
     auxData?: Uint8Array,
   ): bigint {
-    // RFC-9381 challenge format with domain separators
-    const SUITE_ID = new TextEncoder().encode('Bandersnatch_SHA-512_ELL2')
-    const DOM_SEP_START = 0x02
-    const DOM_SEP_END = 0x00
-
-    // Start with suite ID and start separator
-    let buf = new Uint8Array([...SUITE_ID, DOM_SEP_START])
-
-    // Add all points in order: Y_bar, I, O, R, O_k
-    buf = new Uint8Array([...buf, ...Y_bar])
-    buf = new Uint8Array([...buf, ...I])
-    buf = new Uint8Array([...buf, ...O])
-    buf = new Uint8Array([...buf, ...R])
-    buf = new Uint8Array([...buf, ...O_k])
-
-    // Add additional data
-    if (auxData && auxData.length > 0) {
-      buf = new Uint8Array([...buf, ...auxData])
-    }
-
-    // Add end separator
-    buf = new Uint8Array([...buf, DOM_SEP_END])
-
-    // Hash using SHA-512
-    const hashBytes = sha512(buf)
-
-    // Take first 32 bytes (CHALLENGE_LEN) and interpret as big-endian (arkworks style)
-    const challengeBytes = hashBytes.slice(0, 32)
-    let hashValue = BigInt(0)
-    for (let i = 0; i < challengeBytes.length; i++) {
-      hashValue = (hashValue << 8n) | BigInt(challengeBytes[i])
-    }
-
-    return mod(hashValue, BandersnatchCurve.CURVE_ORDER)
+    return generateChallengeRfc9381(
+      [Y_bar, I, O, R, O_k],
+      auxData ?? new Uint8Array(0),
+    )
   }
 
   /**
@@ -407,14 +376,13 @@ export class PedersenVRFProver {
    * π ∈ (G, G, G, F, F) = (Y_bar, R, O_k, s, s_b)
    */
   static serialize(proof: PedersenVRFProof): Uint8Array {
-    // Serialize as: Y_bar || R || O_k || s || s_b
-    return new Uint8Array([
-      ...proof.Y_bar,
-      ...proof.R,
-      ...proof.O_k,
-      ...proof.s,
-      ...proof.s_b,
-    ])
+    const serialized = new Uint8Array(160)
+    serialized.set(proof.Y_bar, 0)
+    serialized.set(proof.R, 32)
+    serialized.set(proof.O_k, 64)
+    serialized.set(proof.s, 96)
+    serialized.set(proof.s_b, 128)
+    return serialized
   }
 
   /**

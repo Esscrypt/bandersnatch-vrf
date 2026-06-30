@@ -37,11 +37,7 @@ export class IETFVRFVerifierWasm {
     if (proof.length !== 96) {
       return false
     }
-    const salt = new Uint8Array(0)
-    const h2cData = new Uint8Array(salt.length + input.length)
-    h2cData.set(salt, 0)
-    h2cData.set(input, salt.length)
-    const alpha = IETFVRFProver.hashToCurve(h2cData)
+    const alpha = IETFVRFProver.hashToCurve(input)
     const gammaFromProof = proof.subarray(0, GAMMA_LEN)
     const proofCS = proof.subarray(GAMMA_LEN, GAMMA_LEN + PROOF_CS_LEN)
     const aux = auxData ?? new Uint8Array(0)

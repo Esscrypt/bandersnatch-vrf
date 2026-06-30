@@ -8,6 +8,8 @@ import {
   verifyEd25519,
 } from './core'
 
+const XANNOUNCE = new TextEncoder().encode('jam_announce')
+
 /**
  * Audit announcement signature generation and verification (Gray Paper Eq. 82).
  *
@@ -42,8 +44,6 @@ export function verifyAnnouncementSignature(
   // - x_n = encoded work report set
   // - blake{H} = Blake2b hash of block header
 
-  const XANNOUNCE = new TextEncoder().encode('jam_announce')
-
   // Convert tranche number to bytes (8 bytes, little-endian)
   const trancheBytes = new Uint8Array(8)
   new DataView(trancheBytes.buffer).setBigUint64(0, announcement.tranche, true)
@@ -54,22 +54,12 @@ export function verifyAnnouncementSignature(
   const workReportSetBytes = new Uint8Array(
     announcement.announcement.workReports.length * 36, // 4 bytes coreIndex + 32 bytes hash
   )
+  const workReportView = new DataView(workReportSetBytes.buffer)
   let offset = 0
   for (const workReport of announcement.announcement.workReports) {
-    // Core index (4 bytes, little-endian)
-    const coreIndexBytes = new Uint8Array(4)
-    new DataView(coreIndexBytes.buffer).setUint32(
-      0,
-      Number(workReport.coreIndex),
-      true,
-    )
-    workReportSetBytes.set(coreIndexBytes, offset)
-    offset += 4
-
-    // Work report hash (32 bytes)
-    const hashBytes = hexToBytes(workReport.workReportHash)
-    workReportSetBytes.set(hashBytes, offset)
-    offset += 32
+    workReportView.setUint32(offset, Number(workReport.coreIndex), true)
+    workReportSetBytes.set(hexToBytes(workReport.workReportHash), offset + 4)
+    offset += 36
   }
 
   // Blake2b hash of block header (blake{H})
@@ -131,7 +121,6 @@ export function generateAnnouncementSignature(
 
   try {
     // Step 1: Construct the message according to Gray Paper Eq. 82
-    const XANNOUNCE = new TextEncoder().encode('jam_announce')
 
     // Convert tranche number to bytes (8 bytes, little-endian)
     const trancheBytes = new Uint8Array(8)
@@ -142,22 +131,12 @@ export function generateAnnouncementSignature(
     const workReportSetBytes = new Uint8Array(
       workReports.length * 36, // 4 bytes coreIndex + 32 bytes hash
     )
+    const workReportView = new DataView(workReportSetBytes.buffer)
     let offset = 0
     for (const workReport of workReports) {
-      // Core index (4 bytes, little-endian) - encode[2]{c}
-      const coreIndexBytes = new Uint8Array(4)
-      new DataView(coreIndexBytes.buffer).setUint32(
-        0,
-        Number(workReport.coreIndex),
-        true,
-      )
-      workReportSetBytes.set(coreIndexBytes, offset)
-      offset += 4
-
-      // Work report hash (32 bytes) - blake{w}
-      const hashBytes = hexToBytes(workReport.workReportHash)
-      workReportSetBytes.set(hashBytes, offset)
-      offset += 32
+      workReportView.setUint32(offset, Number(workReport.coreIndex), true)
+      workReportSetBytes.set(hexToBytes(workReport.workReportHash), offset + 4)
+      offset += 36
     }
 
     // Blake2b hash of block header (blake{H})

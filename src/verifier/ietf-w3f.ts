@@ -59,11 +59,7 @@ export class IETFVRFVerifierW3F {
     }
 
     // WASM fallback: hash input to curve in TypeScript (same as IETFVRFVerifierWasm)
-    const salt = new Uint8Array(0)
-    const h2cData = new Uint8Array(salt.length + input.length)
-    h2cData.set(salt, 0)
-    h2cData.set(input, salt.length)
-    const alpha = IETFVRFProver.hashToCurve(h2cData)
+    const alpha = IETFVRFProver.hashToCurve(input)
 
     const gammaFromProof = proof.subarray(0, 32)
     const proofCS = proof.subarray(32, 96)

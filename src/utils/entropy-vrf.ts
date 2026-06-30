@@ -43,10 +43,10 @@ import {
   type IETFVRFVerifier,
   type IETFVRFVerifierWasm,
 } from '@pbnjam/bandersnatch-vrf'
-import { getCommitmentFromGamma } from './gamma'
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { bytesToHex } from 'viem'
+import { getCommitmentFromGamma } from './gamma'
 
 /**
  * Gray Paper hardcoded context string for entropy VRF

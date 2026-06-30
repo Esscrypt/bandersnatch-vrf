@@ -20,6 +20,12 @@ import { bytesToHex, type Hex, hexToBytes } from 'viem'
 
 ed.hashes.sha512 = (...m: Uint8Array[]) => sha512(ed.etc.concatBytes(...m))
 
+const JAM_VAL_KEY_ED25519 = new TextEncoder().encode('jam_val_key_ed25519')
+const JAM_VAL_KEY_BANDERSNATCH = new TextEncoder().encode(
+  'jam_val_key_bandersnatch',
+)
+const JAM_VAL_KEY_BLS = new TextEncoder().encode('jam_val_key_bls')
+
 export type { Hex }
 export { bytesToHex, hexToBytes }
 
@@ -207,23 +213,17 @@ export function deriveSecretSeeds(seed: Uint8Array): Safe<{
   if (seed.length !== 32) {
     return safeError(new Error('Seed must be exactly 32 bytes'))
   }
-  const ed25519String = new TextEncoder().encode('jam_val_key_ed25519')
-  const bandersnatchString = new TextEncoder().encode(
-    'jam_val_key_bandersnatch',
-  )
-  const blsString = new TextEncoder().encode('jam_val_key_bls')
-
-  const ed25519Input = new Uint8Array(ed25519String.length + seed.length)
-  ed25519Input.set(ed25519String, 0)
-  ed25519Input.set(seed, ed25519String.length)
+  const ed25519Input = new Uint8Array(JAM_VAL_KEY_ED25519.length + seed.length)
+  ed25519Input.set(JAM_VAL_KEY_ED25519, 0)
+  ed25519Input.set(seed, JAM_VAL_KEY_ED25519.length)
   const bandersnatchInput = new Uint8Array(
-    bandersnatchString.length + seed.length,
+    JAM_VAL_KEY_BANDERSNATCH.length + seed.length,
   )
-  bandersnatchInput.set(bandersnatchString, 0)
-  bandersnatchInput.set(seed, bandersnatchString.length)
-  const blsInput = new Uint8Array(blsString.length + seed.length)
-  blsInput.set(blsString, 0)
-  blsInput.set(seed, blsString.length)
+  bandersnatchInput.set(JAM_VAL_KEY_BANDERSNATCH, 0)
+  bandersnatchInput.set(seed, JAM_VAL_KEY_BANDERSNATCH.length)
+  const blsInput = new Uint8Array(JAM_VAL_KEY_BLS.length + seed.length)
+  blsInput.set(JAM_VAL_KEY_BLS, 0)
+  blsInput.set(seed, JAM_VAL_KEY_BLS.length)
 
   const [error, ed25519SecretSeed] = blake2bHash(ed25519Input)
   if (error) return safeError(error)

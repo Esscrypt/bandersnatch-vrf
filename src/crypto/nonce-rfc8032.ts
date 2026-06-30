@@ -44,11 +44,9 @@ export function generateNonceRfc8032(
 
   // Step 2: Hash the encoded scalar bytes
   const skHash = sha512(encodedScalar)
-  const skHashSecondHalf = skHash.slice(32) // Take last 32 bytes (bytes [32..])
-
-  // Step 3: Concatenate sk_hash + input_point
-  // Note: inputPoint is already encoded (from point_encode in the prover)
-  const combined = new Uint8Array([...skHashSecondHalf, ...inputPoint])
+  const combined = new Uint8Array(32 + inputPoint.length)
+  combined.set(skHash.subarray(32), 0)
+  combined.set(inputPoint, 32)
 
   // Step 4: Hash the combination
   const h = sha512(combined)

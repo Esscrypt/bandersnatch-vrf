@@ -2,7 +2,7 @@ import { sha512 } from '@noble/hashes/sha2.js'
 import { BANDERSNATCH_PARAMS, mod } from '@pbnjam/bandersnatch'
 import { bytesToBigInt } from 'viem/utils'
 
-const SUITE_BYTES = new TextEncoder().encode('Bandersnatch_SHA-512_ELL2')
+export const SUITE_BYTES = new TextEncoder().encode('Bandersnatch_SHA-512_ELL2')
 const CHALLENGE_TAG = 0x02
 const POINT_TO_HASH_TAG = 0x03
 const COMPRESSED_POINT_LEN = 32

@@ -57,13 +57,8 @@ export class IETFVRFProver {
   ): IETFVRFResult {
     try {
       // 1. Hash input to curve point (H1)
-      // According to ark-vrf implementation: h2c_data = salt || alpha
-      const salt = new Uint8Array(0) // Empty salt as per test vectors
-      const h2cData = new Uint8Array(salt.length + input.length)
-      h2cData.set(salt, 0)
-      h2cData.set(input, salt.length)
-
-      const alpha = this.hashToCurve(h2cData)
+      // Empty salt per test vectors: h2c_data = salt || alpha === alpha
+      const alpha = this.hashToCurve(input)
 
       // 2. Scalar multiplication: gamma = alpha * secretKey
       const gamma = this.scalarMultiply(alpha, secretKey)
@@ -183,11 +178,10 @@ export class IETFVRFProver {
     const cBytes = numberToBytesLittleEndian(c) // Challenge scalar (32 bytes)
     const sBytes = numberToBytesLittleEndian(s) // Response scalar (32 bytes)
 
-    const proofUint8Array = new Uint8Array([
-      ...gammaBytes,
-      ...cBytes,
-      ...sBytes,
-    ])
+    const proofUint8Array = new Uint8Array(96)
+    proofUint8Array.set(gammaBytes, 0)
+    proofUint8Array.set(cBytes, 32)
+    proofUint8Array.set(sBytes, 64)
 
     return proofUint8Array
   }

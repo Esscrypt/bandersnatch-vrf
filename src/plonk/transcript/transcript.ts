@@ -10,6 +10,20 @@ import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import type { ColumnsCommited, ColumnsEvaluated } from '../piop/mod'
 
+const LABEL_INSTANCE = new TextEncoder().encode('instance')
+const LABEL_COMMITTED_COLS = new TextEncoder().encode('committed_cols')
+const LABEL_QUOTIENT = new TextEncoder().encode('quotient')
+const LABEL_KZG_PROOF_ZETA = new TextEncoder().encode('kzg_proof_zeta')
+const LABEL_KZG_PROOF_ZETA_OMEGA = new TextEncoder().encode(
+  'kzg_proof_zeta_omega',
+)
+const LABEL_REGISTER_EVALUATIONS = new TextEncoder().encode(
+  'register_evaluations',
+)
+const LABEL_SHIFTED_LINEARIZATION_EVALUATION = new TextEncoder().encode(
+  'shifted_linearization_evaluation',
+)
+
 /**
  * Plonk Transcript Trait
  *
@@ -146,14 +160,12 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
   }
 
   addInstance(instance: Uint8Array): void {
-    const label = new TextEncoder().encode('instance')
-    this.append(label)
+    this.append(LABEL_INSTANCE)
     this.append(instance)
   }
 
   addCommittedCols(committedCols: ColumnsCommited<Uint8Array>): void {
-    const label = new TextEncoder().encode('committed_cols')
-    this.append(label)
+    this.append(LABEL_COMMITTED_COLS)
     const cols = committedCols.toVec()
     for (const col of cols) {
       this.append(col)
@@ -168,17 +180,14 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
   }
 
   addQuotientCommitment(commitment: Uint8Array): void {
-    const label = new TextEncoder().encode('quotient')
-    this.append(label)
+    this.append(LABEL_QUOTIENT)
     this.append(commitment)
   }
 
   addKzgProofs(proofZeta: Uint8Array, proofZetaOmega: Uint8Array): void {
-    const label1 = new TextEncoder().encode('kzg_proof_zeta')
-    const label2 = new TextEncoder().encode('kzg_proof_zeta_omega')
-    this.append(label1)
+    this.append(LABEL_KZG_PROOF_ZETA)
     this.append(proofZeta)
-    this.append(label2)
+    this.append(LABEL_KZG_PROOF_ZETA_OMEGA)
     this.append(proofZetaOmega)
   }
 
@@ -187,9 +196,7 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
   }
 
   addEvaluations(evals: ColumnsEvaluated, rAtZetaOmega: bigint): void {
-    const label1 = new TextEncoder().encode('register_evaluations')
-    const label2 = new TextEncoder().encode('shifted_linearization_evaluation')
-    this.append(label1)
+    this.append(LABEL_REGISTER_EVALUATIONS)
     const evalsVec = evals.toVec()
     for (const evalValue of evalsVec) {
       const evalBytes = new Uint8Array(32)
@@ -200,7 +207,7 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
       }
       this.append(evalBytes)
     }
-    this.append(label2)
+    this.append(LABEL_SHIFTED_LINEARIZATION_EVALUATION)
     const rBytes = new Uint8Array(32)
     for (let i = 0; i < 32; i++) {
       rBytes[i] = Number((rAtZetaOmega >> (8n * BigInt(i))) & 0xffn)
