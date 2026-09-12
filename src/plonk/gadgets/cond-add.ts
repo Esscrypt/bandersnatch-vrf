@@ -14,11 +14,11 @@
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BANDERSNATCH_PARAMS, mod, modInverse } from '@pbnjam/bandersnatch'
-import type { Domain, FieldColumn } from '../domain/domain'
-import type { DensePolynomial } from '../domain/polynomial'
-import { DensePolynomialImpl } from '../domain/polynomial'
-import { AffineColumn } from './affine-column'
-import type { BitColumn } from './bit-column'
+import type { Domain, FieldColumn } from '../domain/domain.ts'
+import type { DensePolynomial } from '../domain/polynomial.ts'
+import { DensePolynomialImpl } from '../domain/polynomial.ts'
+import { AffineColumn } from './affine-column.ts'
+import type { BitColumn } from './bit-column.ts'
 
 /**
  * Conditional Addition Gadget for Twisted Edwards curves

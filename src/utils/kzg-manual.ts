@@ -16,7 +16,7 @@ import {
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
 
 /**
  * Blob size according to bandersnatch-vrf-spec

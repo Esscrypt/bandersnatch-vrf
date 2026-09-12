@@ -6,15 +6,15 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { BooleanityValues } from '../gadgets/booleanity'
-import { CondAddValues } from '../gadgets/cond-add'
-import { FixedCellsValues } from '../gadgets/fixed-cells'
-import { InnerProdValues } from '../gadgets/inner-prod'
+import { BooleanityValues } from '../gadgets/booleanity.ts'
+import { CondAddValues } from '../gadgets/cond-add.ts'
+import { FixedCellsValues } from '../gadgets/fixed-cells.ts'
+import { InnerProdValues } from '../gadgets/inner-prod.ts'
 import type {
   FixedColumnsCommitted,
   RingCommitments,
   RingEvaluations,
-} from './mod'
+} from './mod.ts'
 
 /**
  * Evaluated domain for verifier

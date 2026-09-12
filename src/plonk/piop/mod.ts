@@ -5,7 +5,7 @@
  * Matches w3f-ring-proof/src/piop/mod.rs
  */
 
-import type { FixedColumns, PiopParams } from './params'
+import type { FixedColumns, PiopParams } from './params.ts'
 
 /**
  * Columns Committed Trait
@@ -103,7 +103,7 @@ export class RingEvaluations implements ColumnsEvaluated {
 }
 
 // FixedColumns is defined in params.ts, re-export it
-export type { FixedColumns } from './params'
+export type { FixedColumns } from './params.ts'
 
 /**
  * Fixed Columns Committed
@@ -245,6 +245,6 @@ export function index(
 }
 
 // Re-export types and classes
-export type { PiopParams } from './params'
-export { PiopProver } from './prover'
-export { PiopVerifier } from './verifier'
+export type { PiopParams } from './params.ts'
+export { PiopProver } from './prover.ts'
+export { PiopVerifier } from './verifier.ts'

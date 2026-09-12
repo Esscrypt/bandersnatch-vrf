@@ -8,17 +8,17 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { IETFVRFProver } from '../prover/ietf'
-import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm'
+import { IETFVRFProver } from '../prover/ietf.ts'
+import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm.ts'
 import { bytesToHex } from 'viem'
-import { getCommitmentFromGamma } from '../utils/gamma'
+import { getCommitmentFromGamma } from '../utils/gamma.ts'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
   elligator2HashToCurve,
-} from '../crypto/elligator2'
+} from '../crypto/elligator2.ts'
 import { BandersnatchCurve, mod } from '@pbnjam/bandersnatch'
-import { generateChallengeRfc9381 } from '../crypto/rfc9381'
+import { generateChallengeRfc9381 } from '../crypto/rfc9381.ts'
 
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ietf.json
 const testVectorsPath = join(

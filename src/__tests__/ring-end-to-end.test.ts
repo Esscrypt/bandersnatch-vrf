@@ -10,10 +10,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import path from 'node:path'
 import { bytesToHex, hexToBytes, type Hex } from 'viem'
-import { RingVRFProver, type RingVRFInput } from '../prover/ring-kzg'
-import { RingVRFVerifier } from '../verifier/ring'
-import { PedersenVRFProver } from '../prover/pedersen'
-import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma'
+import { RingVRFProver, type RingVRFInput } from '../prover/ring-kzg.ts'
+import { RingVRFVerifier } from '../verifier/ring.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma.ts'
 
 const testVectorsPath = join(
   __dirname,

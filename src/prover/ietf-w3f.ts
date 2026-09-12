@@ -7,8 +7,8 @@
  * Requires the native module; build with `bun run build:native` in the package.
  */
 
-import type { IETFVRFResult } from './ietf'
-import { getRustProveIetfVrf } from './rust-ietf-vrf-wrapper'
+import type { IETFVRFResult } from './ietf.ts'
+import { getRustProveIetfVrf } from './rust-ietf-vrf-wrapper.ts'
 
 const RUST_REQUIRED_MSG =
   'IETF VRF prover requires the Rust native module (rust-ring-proof). Build with: cd rust-ring-proof && bun run build'

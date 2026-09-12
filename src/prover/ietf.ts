@@ -10,14 +10,14 @@ import {
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
 import { hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
   elligator2HashToCurve,
-} from '../crypto/elligator2'
-import { generateNonceRfc8032 } from '../crypto/nonce-rfc8032'
-import { generateChallengeRfc9381 } from '../crypto/rfc9381'
+} from '../crypto/elligator2.ts'
+import { generateNonceRfc8032 } from '../crypto/nonce-rfc8032.ts'
+import { generateChallengeRfc9381 } from '../crypto/rfc9381.ts'
 
 /**
  * IETF VRF result

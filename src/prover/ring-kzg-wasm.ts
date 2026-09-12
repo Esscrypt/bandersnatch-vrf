@@ -12,10 +12,10 @@ import { hexToBytes } from 'viem'
 import {
   compute_ring_commitment,
   prove_ring_proof,
-} from '../../wasm-ark-vrf/ark_vrf_wasm'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { PedersenVRFProver } from './pedersen'
-import type { RingVRFInput, RingVRFResult } from './ring-kzg'
+} from '../../wasm-ark-vrf/ark_vrf_wasm.js'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
+import { PedersenVRFProver } from './pedersen.ts'
+import type { RingVRFInput, RingVRFResult } from './ring-kzg.ts'
 
 /**
  * Replace null (all-zero) keys with the padding point.

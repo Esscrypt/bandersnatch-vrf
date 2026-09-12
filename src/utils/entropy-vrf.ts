@@ -46,7 +46,7 @@ import {
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 import { bytesToHex } from 'viem'
-import { getCommitmentFromGamma } from './gamma'
+import { getCommitmentFromGamma } from './gamma.ts'
 
 /**
  * Gray Paper hardcoded context string for entropy VRF

@@ -5,17 +5,17 @@
  * Matches w3f-ring-proof/src/piop/prover.rs
  */
 
-import type { Domain, FieldColumn } from '../domain/domain'
-import type { DensePolynomial } from '../domain/polynomial'
-import { DensePolynomialImpl } from '../domain/polynomial'
-import type { AffineColumn } from '../gadgets/affine-column'
-import { BitColumn } from '../gadgets/bit-column'
-import { Booleanity } from '../gadgets/booleanity'
-import { CondAdd } from '../gadgets/cond-add'
-import { FixedCells } from '../gadgets/fixed-cells'
-import { InnerProd } from '../gadgets/inner-prod'
-import { RingCommitments, RingEvaluations } from './mod'
-import type { FixedColumns, PiopParams } from './params'
+import type { Domain, FieldColumn } from '../domain/domain.ts'
+import type { DensePolynomial } from '../domain/polynomial.ts'
+import { DensePolynomialImpl } from '../domain/polynomial.ts'
+import type { AffineColumn } from '../gadgets/affine-column.ts'
+import { BitColumn } from '../gadgets/bit-column.ts'
+import { Booleanity } from '../gadgets/booleanity.ts'
+import { CondAdd } from '../gadgets/cond-add.ts'
+import { FixedCells } from '../gadgets/fixed-cells.ts'
+import { InnerProd } from '../gadgets/inner-prod.ts'
+import { RingCommitments, RingEvaluations } from './mod.ts'
+import type { FixedColumns, PiopParams } from './params.ts'
 
 /**
  * PIOP Prover

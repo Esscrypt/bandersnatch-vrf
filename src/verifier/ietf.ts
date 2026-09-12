@@ -10,10 +10,10 @@ import {
   mod,
 } from '@pbnjam/bandersnatch'
 import { bytesToHex, hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
-import { generateChallengeRfc9381 } from '../crypto/rfc9381'
-import { IETFVRFProver } from '../prover/ietf'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
+import { bytesToBigIntLittleEndian } from '../crypto/elligator2.ts'
+import { generateChallengeRfc9381 } from '../crypto/rfc9381.ts'
+import { IETFVRFProver } from '../prover/ietf.ts'
 
 /**
  * IETF VRF Verifier

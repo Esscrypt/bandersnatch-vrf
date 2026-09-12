@@ -13,10 +13,10 @@ import {
   verifyTranche0AuditSignature,
   verifyTrancheNAuditSignature,
   verifyAuditSignature,
-} from '../utils/audit-signature'
-import { type Hex, generateDevAccountValidatorKeyPair } from '../utils/core'
+} from '../utils/audit-signature.ts'
+import { type Hex, generateDevAccountValidatorKeyPair } from '../utils/core.ts'
 import type { WorkReport, AuditAnnouncement, IValidatorSetManager, ValidatorKeyTuple } from '@pbnjam/types'
-import { generateAnnouncementSignature, verifyAnnouncementSignature } from '../utils/announcement'
+import { generateAnnouncementSignature, verifyAnnouncementSignature } from '../utils/announcement.ts'
 import { IETFVRFVerifier, IETFVRFVerifierWasm } from '@pbnjam/bandersnatch-vrf'
 
 const verifier: IETFVRFVerifier | IETFVRFVerifierWasm = new IETFVRFVerifierWasm()
@@ -32,26 +32,26 @@ describe('Audit Signature Functions', () => {
   }
   
   const mockWorkReport: WorkReport = {
-    package_spec: {
+    packageSpec: {
       hash: '0x1111111111111111111111111111111111111111111111111111111111111111',
       length: 1000n,
-      erasure_root: '0x2222222222222222222222222222222222222222222222222222222222222222',
-      exports_root: '0x3333333333333333333333333333333333333333333333333333333333333333',
-      exports_count: 5n,
+      erasureRoot: '0x2222222222222222222222222222222222222222222222222222222222222222',
+      exportsRoot: '0x3333333333333333333333333333333333333333333333333333333333333333',
+      exportsCount: 5n,
     },
     context: {
       anchor: '0x4444444444444444444444444444444444444444444444444444444444444444',
-      state_root: '0x5555555555555555555555555555555555555555555555555555555555555555',
-      beefy_root: '0x6666666666666666666666666666666666666666666666666666666666666666',
-      lookup_anchor: '0x7777777777777777777777777777777777777777777777777777777777777777',
-      lookup_anchor_slot: 1000000n,
+      stateRoot: '0x5555555555555555555555555555555555555555555555555555555555555555',
+      beefyRoot: '0x6666666666666666666666666666666666666666666666666666666666666666',
+      lookupAnchor: '0x7777777777777777777777777777777777777777777777777777777777777777',
+      lookupAnchorSlot: 1000000n,
       prerequisites: [],
     },
-    core_index: 0n,
+    coreIndex: 0n,
     authorizer_hash: '0x8888888888888888888888888888888888888888888888888888888888888888',
-    auth_gas_used: 5000n,
-    auth_output: '0x9999999999999999999999999999999999999999999999999999999999999999',
-    segment_root_lookup: [],
+    authGasUsed: 5000n,
+    authOutput: '0x9999999999999999999999999999999999999999999999999999999999999999',
+    segmentRootLookup: [],
     results: [],
   }
 

@@ -17,23 +17,26 @@ import {
   Bandersnatch,
   BandersnatchCurve,
 } from '@pbnjam/bandersnatch'
-import { bytesToBigIntLittleEndian } from '../crypto/elligator2'
-import { Domain } from '../plonk/domain/domain'
+import { bytesToBigIntLittleEndian } from '../crypto/elligator2.ts'
+import { Domain } from '../plonk/domain/domain.ts'
 import {
   type FixedColumnsCommitted,
   RingCommitments,
   RingEvaluations,
-} from '../plonk/piop/mod'
-import { PiopParams } from '../plonk/piop/params'
-import { PiopProver } from '../plonk/piop/prover'
-import { PiopVerifier } from '../plonk/piop/verifier'
-import type { Proof } from '../plonk/proof'
-import { PlonkProver } from '../plonk/prover'
-import { SimplePlonkTranscript } from '../plonk/transcript/transcript'
-import { PlonkVerifier } from '../plonk/verifier'
-import { bigintToBytes32BE, commitPolynomialCoeffs } from '../utils/kzg-manual'
-import { loadSRSFromFile } from '../utils/srs-loader'
-import { PedersenVRFProver } from './pedersen'
+} from '../plonk/piop/mod.ts'
+import { PiopParams } from '../plonk/piop/params.ts'
+import { PiopProver } from '../plonk/piop/prover.ts'
+import { PiopVerifier } from '../plonk/piop/verifier.ts'
+import type { Proof } from '../plonk/proof.ts'
+import { PlonkProver } from '../plonk/prover.ts'
+import { SimplePlonkTranscript } from '../plonk/transcript/transcript.ts'
+import { PlonkVerifier } from '../plonk/verifier.ts'
+import {
+  bigintToBytes32BE,
+  commitPolynomialCoeffs,
+} from '../utils/kzg-manual.ts'
+import { loadSRSFromFile } from '../utils/srs-loader.ts'
+import { PedersenVRFProver } from './pedersen.ts'
 
 // ---------------------------------------------------------------------------
 // Constants matching Rust lib.rs

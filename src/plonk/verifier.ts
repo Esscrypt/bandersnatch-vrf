@@ -6,11 +6,11 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { bigintToBytes32BE, verifyKzgProof } from '../utils/kzg-manual'
-import type { RingCommitments, RingEvaluations } from './piop/mod'
-import type { PiopVerifier } from './piop/verifier'
-import type { Proof } from './proof'
-import type { PlonkTranscript } from './transcript/transcript'
+import { bigintToBytes32BE, verifyKzgProof } from '../utils/kzg-manual.ts'
+import type { RingCommitments, RingEvaluations } from './piop/mod.ts'
+import type { PiopVerifier } from './piop/verifier.ts'
+import type { Proof } from './proof.ts'
+import type { PlonkTranscript } from './transcript/transcript.ts'
 
 /**
  * Challenges structure

@@ -8,30 +8,30 @@
 
 import { performance } from 'node:perf_hooks'
 import { BandersnatchCurve, Bandersnatch } from '@pbnjam/bandersnatch'
-import { IETFVRFProver } from '../prover/ietf'
-import { IETFVRFVerifier } from '../verifier/ietf'
-import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm'
-import { PedersenVRFProver } from '../prover/pedersen'
-import { PedersenVRFVerifier } from '../verifier/pedersen'
-import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma'
+import { IETFVRFProver } from '../prover/ietf.ts'
+import { IETFVRFVerifier } from '../verifier/ietf.ts'
+import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import { PedersenVRFVerifier } from '../verifier/pedersen.ts'
+import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma.ts'
 import {
   generateEntropyVRFSignature,
   verifyEntropyVRFSignature,
   banderout,
-} from '../utils/entropy-vrf'
+} from '../utils/entropy-vrf.ts'
 import {
   generateTranche0AuditSignature,
   verifyTranche0AuditSignature,
   generateTrancheNAuditSignature,
   verifyTrancheNAuditSignature,
-} from '../utils/audit-signature'
+} from '../utils/audit-signature.ts'
 import {
   generateAnnouncementSignature,
   verifyAnnouncementSignature,
-} from '../utils/announcement'
-import { encodeWorkReport } from '../utils/codec'
-import { generateDevAccountValidatorKeyPair, blake2bHash } from '../utils/core'
-import { pointToHashRfc9381 } from '../crypto/rfc9381'
+} from '../utils/announcement.ts'
+import { encodeWorkReport } from '../utils/codec.ts'
+import { generateDevAccountValidatorKeyPair, blake2bHash } from '../utils/core.ts'
+import { pointToHashRfc9381 } from '../crypto/rfc9381.ts'
 import type { WorkReport, AuditAnnouncement } from '@pbnjam/types'
 import type { Hex } from 'viem'
 
@@ -84,26 +84,26 @@ const sealOutput = new Uint8Array(32).fill(0x42)
 const blockHeaderVrfOutput = new Uint8Array(32).fill(0x03)
 
 const mockWorkReport: WorkReport = {
-  package_spec: {
+  packageSpec: {
     hash: '0x1111111111111111111111111111111111111111111111111111111111111111',
     length: 1000n,
-    erasure_root: '0x2222222222222222222222222222222222222222222222222222222222222222',
-    exports_root: '0x3333333333333333333333333333333333333333333333333333333333333333',
-    exports_count: 5n,
+    erasureRoot: '0x2222222222222222222222222222222222222222222222222222222222222222',
+    exportsRoot: '0x3333333333333333333333333333333333333333333333333333333333333333',
+    exportsCount: 5n,
   },
   context: {
     anchor: '0x4444444444444444444444444444444444444444444444444444444444444444',
-    state_root: '0x5555555555555555555555555555555555555555555555555555555555555555',
-    beefy_root: '0x6666666666666666666666666666666666666666666666666666666666666666',
-    lookup_anchor: '0x7777777777777777777777777777777777777777777777777777777777777777',
-    lookup_anchor_slot: 1000000n,
+    stateRoot: '0x5555555555555555555555555555555555555555555555555555555555555555',
+    beefyRoot: '0x6666666666666666666666666666666666666666666666666666666666666666',
+    lookupAnchor: '0x7777777777777777777777777777777777777777777777777777777777777777',
+    lookupAnchorSlot: 1000000n,
     prerequisites: [],
   },
-  core_index: 0n,
+  coreIndex: 0n,
   authorizer_hash: '0x8888888888888888888888888888888888888888888888888888888888888888',
-  auth_gas_used: 5000n,
-  auth_output: '0x9999999999999999999999999999999999999999999999999999999999999999',
-  segment_root_lookup: [],
+  authGasUsed: 5000n,
+  authOutput: '0x9999999999999999999999999999999999999999999999999999999999999999',
+  segmentRootLookup: [],
   results: [],
 }
 

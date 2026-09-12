@@ -1,0 +1,19 @@
+[package]
+name = "pbnjam-bvrf-ffi"
+version = "0.1.0"
+edition = "2021"
+description = "ScriptC-facing C ABI staticlib for Bandersnatch VRF verification (no napi)"
+publish = false
+
+[lib]
+name = "pbnjam_bvrf_ffi"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+pbnjam-ring-proof-core = { path = "../rust-core" }
+ark-bls12-381 = { version = "0.5", default-features = true, features = ["curve"] }
+ark-serialize = { version = "0.5", default-features = true, features = ["derive"] }
+w3f-pcs = { version = "0.0.2", default-features = true }
+
+[dev-dependencies]
+serde_json = "1"

@@ -3,12 +3,12 @@
  */
 
 // Configuration
-export * from './config'
+export * from './config.ts'
 // Implementation exports
-export * from './ietf'
-export * from './ietf-w3f'
-export * from './ietf-wasm'
-export * from './pedersen'
-export * from './ring'
-export * from './ring-w3f'
-export * from './ring-wasm'
+export * from './ietf.ts'
+export * from './ietf-w3f.ts'
+export * from './ietf-wasm.ts'
+export * from './pedersen.ts'
+export * from './ring.ts'
+export * from './ring-w3f.ts'
+export * from './ring-wasm.ts'

@@ -56,8 +56,8 @@ import type {
   WorkReport,
 } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
-import { encodeWorkReport } from './codec'
-import { blake2bHash, type Hex, hexToBytes, jamShuffle } from './core'
+import { encodeWorkReport } from './codec.ts'
+import { blake2bHash, type Hex, hexToBytes, jamShuffle } from './core.ts'
 
 /**
  * Gray Paper hardcoded context string for audit VRF
@@ -153,7 +153,7 @@ export function generateTrancheNAuditSignature(
   validatorSecretKey: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
   workReport: WorkReport,
-  trancheNumber: bigint,
+  trancheNumber: number,
 ): Safe<AuditSignatureResult> {
   // Validate inputs
   if (validatorSecretKey.length !== 32) {
@@ -186,7 +186,7 @@ export function generateTrancheNAuditSignature(
 
   // Convert tranche number to bytes (8 bytes, little-endian)
   const trancheBytes = new Uint8Array(8)
-  new DataView(trancheBytes.buffer).setBigUint64(0, trancheNumber, true)
+  new DataView(trancheBytes.buffer).setBigUint64(0, BigInt(trancheNumber), true)
 
   // Build VRF context according to Gray Paper equation 105:
   // context = Xaudit ∥ banderout{H_vrfsig} ∥ blake{w} ∥ n
@@ -286,7 +286,7 @@ export function verifyTrancheNAuditSignature(
   signature: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
   workReport: WorkReport,
-  trancheNumber: bigint,
+  trancheNumber: number,
   verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Safe<boolean> {
   // Validate inputs
@@ -324,7 +324,7 @@ export function verifyTrancheNAuditSignature(
 
   // Convert tranche number to bytes (8 bytes, little-endian)
   const trancheBytes = new Uint8Array(8)
-  new DataView(trancheBytes.buffer).setBigUint64(0, trancheNumber, true)
+  new DataView(trancheBytes.buffer).setBigUint64(0, BigInt(trancheNumber), true)
 
   // Build VRF context according to Gray Paper equation 105:
   // context = Xaudit ∥ banderout{H_vrfsig} ∥ blake{w} ∥ n
@@ -370,10 +370,10 @@ export function verifyTrancheNAuditSignature(
 export function generateAuditSignature(
   validatorSecretKey: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
-  trancheNumber: bigint,
+  trancheNumber: number,
   workReport?: WorkReport,
 ): Safe<AuditSignatureResult> {
-  if (trancheNumber === 0n) {
+  if (trancheNumber === 0) {
     // Use tranche 0 logic
     return generateTranche0AuditSignature(
       validatorSecretKey,
@@ -409,11 +409,11 @@ export function verifyAuditSignature(
   validatorPublicKey: Uint8Array,
   signature: Uint8Array,
   blockHeaderVrfOutput: Uint8Array,
-  trancheNumber: bigint,
+  trancheNumber: number,
   verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
   workReport?: WorkReport,
 ): Safe<boolean> {
-  if (trancheNumber === 0n) {
+  if (trancheNumber === 0) {
     // Use tranche 0 logic
     return verifyTranche0AuditSignature(
       validatorPublicKey,
@@ -456,7 +456,7 @@ export function verifyBandersnatchVRFEvidence(
   // This should come from the block header's VRF signature
   const blockHeaderVrfOutput = hexToBytes(announcement.headerHash)
 
-  if (announcement.tranche === 0n) {
+  if (announcement.tranche === 0) {
     // Verify tranche 0 evidence using our audit signature verification
     return verifyTranche0AuditSignature(
       announcerBandersnatchPublicKey,
@@ -496,12 +496,12 @@ export function verifyBandersnatchVRFEvidence(
  */
 export function verifyWorkReportSelection(
   announcement: AuditAnnouncement,
-  availableCoreWorkReports: Map<bigint, WorkReport[]>,
+  availableCoreWorkReports: Map<number, WorkReport[]>,
   bandersnatchVrfOutput: Hex,
   configService: IConfigService,
   previousTrancheAnnouncements?: AuditAnnouncement[],
 ): Safe<boolean> {
-  if (announcement.tranche === 0n) {
+  if (announcement.tranche === 0) {
     // Verify tranche 0 selection using Fisher-Yates shuffle
     return verifyTranche0WorkReportSelection(
       announcement,
@@ -529,7 +529,7 @@ export function verifyWorkReportSelection(
  */
 function verifyTranche0WorkReportSelection(
   announcement: AuditAnnouncement,
-  availableCoreWorkReports: Map<bigint, WorkReport[]>,
+  availableCoreWorkReports: Map<number, WorkReport[]>,
   bandersnatchVrfOutput: Hex,
 ): Safe<boolean> {
   // Create core-workreport pairs as per Gray Paper
@@ -543,7 +543,7 @@ function verifyTranche0WorkReportSelection(
 
   // Select first 10 non-empty cores for auditing
   // local_tranche_0 = {wrc for wrc in p[0:10] if wr != None}
-  const expectedSelectedCoreIndices = new Set<bigint>()
+  const expectedSelectedCoreIndices = new Set<number>()
 
   for (const [core, workReports] of shuffledSequence) {
     // Only include cores with non-empty work reports
@@ -606,7 +606,7 @@ function verifyTrancheNWorkReportSelection(
     // This is the number of validators who announced intent to audit this work report
     // in the previous tranche but haven't provided a judgment yet
 
-    const previousAnnouncers = new Set<bigint>()
+    const previousAnnouncers = new Set<number>()
     //TODO: implement this
     // for (const prevAnnouncement of previousTrancheAnnouncements) {
     //   // Check if this validator announced intent to audit this work report
@@ -624,7 +624,7 @@ function verifyTrancheNWorkReportSelection(
 
     // TODO: Calculate J_top(wr) - validators who provided positive judgments
     // For now, we'll assume no judgments have been received (worst case)
-    const positiveJudgments = new Set<bigint>() // Empty for now
+    const positiveJudgments = new Set<number>() // Empty for now
 
     // Calculate m_n: number of no-shows
     const m_n = previousAnnouncers.size - positiveJudgments.size

@@ -9,11 +9,11 @@ import { describe, expect, test, beforeAll } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { bytesToHex, hexToBytes, type Hex } from 'viem'
-import { RingVRFProverW3F } from '../prover/ring-kzg-w3f'
-import { RingVRFVerifierW3F } from '../verifier/ring-w3f'
-import { PedersenVRFProver } from '../prover/pedersen'
-import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma'
-import type { RingVRFInput } from '../prover/ring-kzg'
+import { RingVRFProverW3F } from '../prover/ring-kzg-w3f.ts'
+import { RingVRFVerifierW3F } from '../verifier/ring-w3f.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma.ts'
+import type { RingVRFInput } from '../prover/ring-kzg.ts'
 
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ring.json
 const testVectorsPath = join(

@@ -7,18 +7,18 @@
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'
-import { curvePointToNoble } from '../crypto/elligator2'
+import { curvePointToNoble } from '../crypto/elligator2.ts'
 import {
   bigintToBytes32BE,
   commitPolynomialCoeffs,
   computeKzgProofFromCoeffs,
-} from '../utils/kzg-manual'
-import type { DensePolynomial } from './domain/polynomial'
-import { DensePolynomialImpl } from './domain/polynomial'
-import type { RingCommitments, RingEvaluations } from './piop/mod'
-import type { PiopProver } from './piop/prover'
-import type { Proof } from './proof'
-import type { PlonkTranscript } from './transcript/transcript'
+} from '../utils/kzg-manual.ts'
+import type { DensePolynomial } from './domain/polynomial.ts'
+import { DensePolynomialImpl } from './domain/polynomial.ts'
+import type { RingCommitments, RingEvaluations } from './piop/mod.ts'
+import type { PiopProver } from './piop/prover.ts'
+import type { Proof } from './proof.ts'
+import type { PlonkTranscript } from './transcript/transcript.ts'
 
 /**
  * Plonk Prover

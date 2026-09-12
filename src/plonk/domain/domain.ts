@@ -6,9 +6,9 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { ifftFieldElements } from '../../utils/fft-utils'
-import type { DensePolynomial } from './polynomial'
-import { DensePolynomialImpl } from './polynomial'
+import { ifftFieldElements } from '../../utils/fft-utils.ts'
+import type { DensePolynomial } from './polynomial.ts'
+import { DensePolynomialImpl } from './polynomial.ts'
 
 export const ZK_ROWS = 3 // Zero-knowledge rows for hiding
 

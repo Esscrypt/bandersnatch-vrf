@@ -16,6 +16,12 @@ bin/
 rust-ring-proof/target/
 rust-ring-proof/native/
 
+# Runtime-agnostic core (rlib) build artifacts
+rust-core/target/
+
+# ScriptC C ABI staticlib build artifacts
+rust-ffi/target/
+
 # WASM connector build artifacts
 rust-wasm-bindings/target/
 rust-wasm-bindings/pkg/

@@ -1,0 +1,54 @@
+{
+  "abi_version": 1,
+  "ffi_format": 3,
+  "symbols": [
+    {
+      "callback": false,
+      "name": "pbnjam_bvrf_abi_version",
+      "packed_schema": null,
+      "params": []
+    },
+    {
+      "callback": true,
+      "name": "pbnjam_bvrf_ietf_verify",
+      "packed_schema": "bvrf_ietf_verify",
+      "params": ["bytes"]
+    },
+    {
+      "callback": true,
+      "name": "pbnjam_bvrf_ring_batch_verify",
+      "packed_schema": "bvrf_ring_batch_verify",
+      "params": ["u32", "u32", "bytes"]
+    },
+    {
+      "callback": true,
+      "name": "pbnjam_bvrf_ring_prepare",
+      "packed_schema": "bvrf_ring_prepare",
+      "params": ["u32", "bytes"]
+    },
+    {
+      "callback": false,
+      "name": "pbnjam_bvrf_ring_release",
+      "packed_schema": null,
+      "params": ["u32"]
+    },
+    {
+      "callback": true,
+      "name": "pbnjam_bvrf_srs_open",
+      "packed_schema": "bvrf_srs_open",
+      "params": ["bytes"]
+    },
+    {
+      "callback": false,
+      "name": "pbnjam_bvrf_srs_release",
+      "packed_schema": null,
+      "params": ["u32"]
+    },
+    {
+      "callback": true,
+      "name": "pbnjam_bvrf_take_last_error",
+      "packed_schema": "bvrf_last_error",
+      "params": []
+    }
+  ]
+}

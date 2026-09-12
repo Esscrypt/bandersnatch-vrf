@@ -8,11 +8,11 @@
 
 import { describe, test, expect } from 'bun:test'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { Domain } from '../../domain/domain'
-import { Doubling } from '../../gadgets/doubling'
-import { randomPoint } from './test-helpers'
-import { DensePolynomialImpl } from '../../domain/polynomial'
-import { ifftFieldElements, getOmegaForDomain } from '../../../utils/fft-utils'
+import { Domain } from '../../domain/domain.ts'
+import { Doubling } from '../../gadgets/doubling.ts'
+import { randomPoint } from './test-helpers.ts'
+import { DensePolynomialImpl } from '../../domain/polynomial.ts'
+import { ifftFieldElements, getOmegaForDomain } from '../../../utils/fft-utils.ts'
 import { BANDERSNATCH_PARAMS, mod, modInverse } from '@pbnjam/bandersnatch'
 
 const Fr = bls12_381.fields.Fr

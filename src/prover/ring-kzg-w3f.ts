@@ -9,13 +9,14 @@
 
 import { readFileSync } from 'node:fs'
 import { hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { PedersenVRFProver } from './pedersen'
-import type { RingVRFInput, RingVRFResult } from './ring-kzg'
+import { type RingBackend, unwrapSyncBackendResult } from '../backends.ts'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
+import { PedersenVRFProver } from './pedersen.ts'
+import type { RingVRFInput, RingVRFResult } from './ring-kzg.ts'
 import {
   getRustComputeRingCommitment,
   getRustProveRingProof,
-} from './rust-ring-proof-wrapper'
+} from './rust-ring-proof-wrapper.ts'
 
 const RUST_REQUIRED_MSG =
   'Ring VRF prover requires the Rust native module (rust-ring-proof). Build with: cd rust-ring-proof && bun run build'
@@ -36,15 +37,24 @@ function replaceNullKeyWithPadding(keyBytes: Uint8Array): Uint8Array {
  * Ring VRF Prover using Rust native module (rust-ring-proof).
  */
 export class RingVRFProverW3F {
-  private readonly srsBytes: Uint8Array
+  private readonly srsBytes: Uint8Array | null
+  private readonly backend: RingBackend | null
 
   /**
    * Create a new Ring VRF Prover instance.
    *
    * @param srsFilePath - Path to SRS file (uncompressed arkworks format)
    */
-  constructor(srsFilePath: string) {
-    this.srsBytes = readFileSync(srsFilePath)
+  constructor(srsFilePath: string)
+  constructor(options: { backend: RingBackend })
+  constructor(srsFilePathOrOptions: string | { backend: RingBackend }) {
+    if (typeof srsFilePathOrOptions === 'object') {
+      this.backend = srsFilePathOrOptions.backend
+      this.srsBytes = null
+      return
+    }
+    this.backend = null
+    this.srsBytes = readFileSync(srsFilePathOrOptions)
   }
 
   /**
@@ -63,6 +73,13 @@ export class RingVRFProverW3F {
    * 3. Generate ring proof (Rust)
    */
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
+    if (this.backend) {
+      throw new Error('Ring VRF proving is unavailable on this runtime')
+    }
+    if (!this.srsBytes) {
+      throw new Error('Ring VRF proving is unavailable on this runtime')
+    }
+
     // Step 1: Generate Pedersen VRF proof (TypeScript)
     const pedersenInput = {
       input: input.input,
@@ -137,6 +154,17 @@ export class RingVRFProverW3F {
     for (let i = 0; i < ringKeys.length; i++) {
       const key = replaceNullKeyWithPadding(ringKeys[i])
       ringKeysBytes.set(key, i * 32)
+    }
+
+    if (this.backend) {
+      const prepared = unwrapSyncBackendResult(
+        this.backend.prepare(ringKeysBytes),
+        'RingBackend.prepare',
+      )
+      return prepared.commitment
+    }
+    if (!this.srsBytes) {
+      throw new Error('Ring VRF proving is unavailable on this runtime')
     }
 
     const rustCompute = getRustComputeRingCommitment()

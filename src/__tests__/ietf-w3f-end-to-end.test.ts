@@ -12,11 +12,11 @@ import { describe, expect, test, beforeAll } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { bytesToHex } from 'viem'
-import { IETFVRFProverW3F } from '../prover/ietf-w3f'
-import { IETFVRFVerifierW3F } from '../verifier/ietf-w3f'
-import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm'
-import { isRustIetfVrfProverAvailable, isRustIetfVrfVerifierAvailable } from '../prover/rust-ietf-vrf-wrapper'
-import { getCommitmentFromGamma } from '../utils/gamma'
+import { IETFVRFProverW3F } from '../prover/ietf-w3f.ts'
+import { IETFVRFVerifierW3F } from '../verifier/ietf-w3f.ts'
+import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm.ts'
+import { isRustIetfVrfProverAvailable, isRustIetfVrfVerifierAvailable } from '../prover/rust-ietf-vrf-wrapper.ts'
+import { getCommitmentFromGamma } from '../utils/gamma.ts'
 
 // ---------------------------------------------------------------------------
 // Test vectors

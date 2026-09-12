@@ -7,12 +7,12 @@
 
 import { describe, test, expect } from 'bun:test'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import { Domain } from '../../domain/domain'
-import { FieldColumn } from '../../domain/domain'
-import { FixedCells } from '../../gadgets/fixed-cells'
-import { randomVec } from './test-helpers'
-import { DensePolynomialImpl } from '../../domain/polynomial'
-import { ifftFieldElements, getOmegaForDomain } from '../../../utils/fft-utils'
+import { Domain } from '../../domain/domain.ts'
+import { FieldColumn } from '../../domain/domain.ts'
+import { FixedCells } from '../../gadgets/fixed-cells.ts'
+import { randomVec } from './test-helpers.ts'
+import { DensePolynomialImpl } from '../../domain/polynomial.ts'
+import { ifftFieldElements, getOmegaForDomain } from '../../../utils/fft-utils.ts'
 
 const Fr = bls12_381.fields.Fr
 

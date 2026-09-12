@@ -1,27 +1,24 @@
 /**
  * Ring VRF Verifier using Rust connector (native) or WASM bindings
  *
- * When the Rust connector (rust-ring-proof) is built, it handles w3f verify_ring_vrf
- * (index, RingVrfVerifier::init, verify). TypeScript handles validations and mapping
- * (vrf_input = hashToCurve(input), vrf_output = gamma, seed/padding/transcript from config).
- * Falls back to ark-vrf WASM (verify_ring_proof) when the native module is not available.
+ * When a RingBackend is injected (ScriptC C ABI) or the default Node-API backend
+ * resolves, ring membership goes through prepare + batchVerify. TypeScript still
+ * handles Pedersen composition, null-key padding, and the 784-byte proof guard.
+ * Falls back to ark-vrf WASM only when neither backend nor addon resolves.
  */
 
 import { readFileSync } from 'node:fs'
-import { blake2b } from '@noble/hashes/blake2.js'
-import { bytesToHex, hexToBytes } from 'viem'
-import { verify_ring_proof } from '../../wasm-ark-vrf/ark_vrf_wasm'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { PedersenVRFProver } from '../prover/pedersen'
-import type { RingVRFInput } from '../prover/ring-kzg'
+import { hexToBytes } from 'viem'
 import {
-  getRustBatchVerifyRingVrf,
-  getRustComputeRingVerifierKey,
-  getRustVerifyRingVrf,
-  getRustVerifyRingVrfWithKey,
-  validateVerifyRingVrfInputs,
-} from '../prover/rust-ring-proof-wrapper'
-import { PedersenVRFVerifier } from './pedersen'
+  createNapiRingBackend,
+  loadWasmVerifyRingProof,
+  type RingBackend,
+  unwrapSyncBackendResult,
+} from '../backends.ts'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import type { RingVRFInput } from '../prover/ring-kzg.ts'
+import { PedersenVRFVerifier } from './pedersen.ts'
 
 /**
  * Replace null (all-zero) keys with the padding point.
@@ -34,41 +31,47 @@ function replaceNullKeyWithPadding(keyBytes: Uint8Array): Uint8Array {
   return keyBytes
 }
 
+function flattenRingKeys(ringKeys: Uint8Array[]): Uint8Array {
+  const ringKeysBytes = new Uint8Array(ringKeys.length * 32)
+  for (let i = 0; i < ringKeys.length; i++) {
+    ringKeysBytes.set(replaceNullKeyWithPadding(ringKeys[i]!), i * 32)
+  }
+  return ringKeysBytes
+}
+
+function assertRingProofNotFullStructure(ringProofBytes: Uint8Array): void {
+  if (ringProofBytes.length === 784) {
+    console.error(
+      '[RingVRFVerifierW3F] ERROR: ringProof is 784 bytes - full structure, not ring proof only',
+    )
+    throw new Error(
+      'Invalid ring proof: received full 784-byte structure instead of ring proof portion',
+    )
+  }
+}
+
 /**
- * Ring VRF Verifier (W3F): Rust when available, else WASM.
+ * Ring VRF Verifier (W3F): injected/default backend when available, else WASM.
  * Same verify API as RingVRFVerifierWasm.
  */
 export class RingVRFVerifierW3F {
-  private srsBytes: Uint8Array
+  private readonly srsBytes: Uint8Array | null
+  private readonly backend: RingBackend | null
 
-  // Content-addressed LRU of serialized ring VerifierKeys, keyed by blake2b(ringKeys).
-  // The ring is fixed per epoch, so this turns the expensive per-ticket index()+SRS work
-  // into a once-per-ring computation. Self-invalidating: a changed ring hashes differently.
-  private vkCache = new Map<string, Uint8Array>()
-  private readonly VK_CACHE_CAP = 3
-
-  constructor(srsFilePath: string) {
-    this.srsBytes = readFileSync(srsFilePath)
+  constructor(srsFilePath: string)
+  constructor(options: { backend: RingBackend })
+  constructor(srsFilePathOrOptions: string | { backend: RingBackend }) {
+    if (typeof srsFilePathOrOptions === 'object') {
+      this.backend = srsFilePathOrOptions.backend
+      this.srsBytes = null
+      return
+    }
+    this.srsBytes = readFileSync(srsFilePathOrOptions)
+    this.backend = createNapiRingBackend(this.srsBytes)
   }
 
   async init(): Promise<void> {
     // No-op; kept for API compatibility
-  }
-
-  /** Get (or compute + cache) the serialized ring VerifierKey for these ring keys. */
-  private getVerifierKey(ringKeysBytes: Uint8Array): Uint8Array | null {
-    const compute = getRustComputeRingVerifierKey()
-    if (!compute) return null
-    const key = bytesToHex(blake2b(ringKeysBytes, { dkLen: 32 }))
-    const hit = this.vkCache.get(key)
-    if (hit) return hit
-    const vk = compute(this.srsBytes, ringKeysBytes)
-    if (this.vkCache.size >= this.VK_CACHE_CAP) {
-      const oldest = this.vkCache.keys().next().value
-      if (oldest !== undefined) this.vkCache.delete(oldest)
-    }
-    this.vkCache.set(key, vk)
-    return vk
   }
 
   verify(
@@ -95,79 +98,42 @@ export class RingVRFVerifierW3F {
       return false
     }
 
-    const ringKeysBytes = new Uint8Array(ringKeys.length * 32)
-    for (let i = 0; i < ringKeys.length; i++) {
-      const key = replaceNullKeyWithPadding(ringKeys[i]!)
-      ringKeysBytes.set(key, i * 32)
-    }
-
     const ringProofBytes = result.proof.ringProof
-    if (ringProofBytes.length === 784) {
-      console.error(
-        '[RingVRFVerifierW3F] ERROR: ringProof is 784 bytes - full structure, not ring proof only',
-      )
-      throw new Error(
-        'Invalid ring proof: received full 784-byte structure instead of ring proof portion',
-      )
-    }
+    assertRingProofNotFullStructure(ringProofBytes)
 
-    const rustVerifyWithKey = getRustVerifyRingVrfWithKey()
-    if (rustVerifyWithKey) {
-      const pedersenProof = PedersenVRFProver.deserialize(
-        result.proof.pedersenProof,
-      )
-      const keyCommitmentBytes = pedersenProof.Y_bar
-      const vk = this.getVerifierKey(ringKeysBytes)
-      if (vk) {
-        try {
-          return rustVerifyWithKey(
-            vk,
-            ringProofBytes,
-            keyCommitmentBytes,
-            ringKeys.length,
-          )
-        } catch (error) {
-          console.error('[RingVRFVerifierW3F] Rust cached-VK verify failed', {
-            error: error instanceof Error ? error.message : String(error),
-          })
-          return false
-        }
-      }
-    }
+    const ringKeysBytes = flattenRingKeys(ringKeys)
+    const keyCommitmentBytes = PedersenVRFProver.deserialize(
+      result.proof.pedersenProof,
+    ).Y_bar
 
-    const rustVerify = getRustVerifyRingVrf()
-    if (rustVerify) {
-      const pedersenProof = PedersenVRFProver.deserialize(
-        result.proof.pedersenProof,
-      )
-      const keyCommitmentBytes = pedersenProof.Y_bar
+    if (this.backend) {
       try {
-        validateVerifyRingVrfInputs({
-          srsBytes: this.srsBytes,
-          proofBytes: ringProofBytes,
-          ringKeysBytes,
-          keyCommitmentBytes,
-        })
-        return rustVerify(
-          this.srsBytes,
-          ringProofBytes,
-          ringKeysBytes,
-          keyCommitmentBytes,
+        const prepared = unwrapSyncBackendResult(
+          this.backend.prepare(ringKeysBytes),
+          'RingBackend.prepare',
+        )
+        return unwrapSyncBackendResult(
+          this.backend.batchVerify(prepared.ring, ringKeys.length, [
+            { proof: ringProofBytes, keyCommitment: keyCommitmentBytes },
+          ]),
+          'RingBackend.batchVerify',
         )
       } catch (error) {
-        console.error('[RingVRFVerifierW3F] Rust verify failed', {
+        console.error('[RingVRFVerifierW3F] backend verify failed', {
           error: error instanceof Error ? error.message : String(error),
         })
         return false
       }
     }
 
-    const pedersenProof = PedersenVRFProver.deserialize(
-      result.proof.pedersenProof,
-    )
-    const keyCommitmentBytes = pedersenProof.Y_bar
+    if (!this.srsBytes) {
+      console.error('[RingVRFVerifierW3F] WASM verify requires SRS bytes')
+      return false
+    }
+
     try {
-      return verify_ring_proof(
+      const verifyRingProof = loadWasmVerifyRingProof()
+      return verifyRingProof(
         this.srsBytes,
         ringProofBytes,
         ringKeysBytes,
@@ -186,7 +152,7 @@ export class RingVRFVerifierW3F {
    * Verify many ring VRF proofs that share one ring in a single aggregated pairing check.
    * The per-entry Pedersen check stays per-entry (it has no pairing); only the ring-membership
    * proofs are batched. Returns true only if every entry is valid. Falls back to per-entry
-   * `verify` when the native batch path is unavailable.
+   * `verify` when no backend is available.
    */
   verifyBatch(
     ringKeys: Uint8Array[],
@@ -205,23 +171,13 @@ export class RingVRFVerifierW3F {
   ): boolean {
     if (entries.length === 0) return true
 
-    const batchFn = getRustBatchVerifyRingVrf()
-    if (!batchFn) {
-      // No native batch: verify each entry individually (still uses the cached-VK fast path).
+    if (!this.backend) {
       return entries.every((e) =>
         this.verify(ringKeys, e.input, e.result, e.auxData),
       )
     }
 
-    const ringKeysBytes = new Uint8Array(ringKeys.length * 32)
-    for (let i = 0; i < ringKeys.length; i++) {
-      ringKeysBytes.set(replaceNullKeyWithPadding(ringKeys[i]!), i * 32)
-    }
-
-    const items: Array<{
-      proofBytes: Uint8Array
-      keyCommitmentBytes: Uint8Array
-    }> = []
+    const items: Array<{ proof: Uint8Array; keyCommitment: Uint8Array }> = []
     for (const e of entries) {
       const pedersenValid = PedersenVRFVerifier.verify(
         e.input.input,
@@ -232,27 +188,26 @@ export class RingVRFVerifierW3F {
       if (!pedersenValid) return false
 
       const ringProofBytes = e.result.proof.ringProof
-      if (ringProofBytes.length === 784) {
-        throw new Error(
-          'Invalid ring proof: received full 784-byte structure instead of ring proof portion',
-        )
-      }
-      const keyCommitmentBytes = PedersenVRFProver.deserialize(
-        e.result.proof.pedersenProof,
-      ).Y_bar
-      items.push({ proofBytes: ringProofBytes, keyCommitmentBytes })
+      assertRingProofNotFullStructure(ringProofBytes)
+      items.push({
+        proof: ringProofBytes,
+        keyCommitment: PedersenVRFProver.deserialize(
+          e.result.proof.pedersenProof,
+        ).Y_bar,
+      })
     }
 
-    const vk = this.getVerifierKey(ringKeysBytes)
-    if (!vk) {
-      return entries.every((e) =>
-        this.verify(ringKeys, e.input, e.result, e.auxData),
-      )
-    }
     try {
-      return batchFn(vk, ringKeys.length, items)
+      const prepared = unwrapSyncBackendResult(
+        this.backend.prepare(flattenRingKeys(ringKeys)),
+        'RingBackend.prepare',
+      )
+      return unwrapSyncBackendResult(
+        this.backend.batchVerify(prepared.ring, ringKeys.length, items),
+        'RingBackend.batchVerify',
+      )
     } catch (error) {
-      console.error('[RingVRFVerifierW3F] Rust batch verify failed', {
+      console.error('[RingVRFVerifierW3F] backend batch verify failed', {
         error: error instanceof Error ? error.message : String(error),
       })
       return false

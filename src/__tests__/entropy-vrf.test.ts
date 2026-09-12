@@ -3,9 +3,9 @@ import {
   generateEntropyVRFSignature,
   verifyEntropyVRFSignature,
   banderout,
-} from '../utils/entropy-vrf'
-import { generateDevAccountValidatorKeyPair } from '../utils/core'
-import { IETFVRFVerifier } from '../verifier/ietf'
+} from '../utils/entropy-vrf.ts'
+import { generateDevAccountValidatorKeyPair } from '../utils/core.ts'
+import { IETFVRFVerifier } from '../verifier/ietf.ts'
 
 const verifier = new IETFVRFVerifier()
 

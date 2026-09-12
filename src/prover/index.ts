@@ -3,9 +3,9 @@
  */
 
 // Implementation exports
-export * from './ietf'
-export * from './ietf-w3f'
-export * from './pedersen'
-export * from './ring-kzg'
-export * from './ring-kzg-w3f'
-export * from './ring-kzg-wasm'
+export * from './ietf.ts'
+export * from './ietf-w3f.ts'
+export * from './pedersen.ts'
+export * from './ring-kzg.ts'
+export * from './ring-kzg-w3f.ts'
+export * from './ring-kzg-wasm.ts'

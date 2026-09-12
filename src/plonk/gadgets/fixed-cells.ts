@@ -6,7 +6,7 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import type { Domain, FieldColumn } from '../domain/domain'
+import type { Domain, FieldColumn } from '../domain/domain.ts'
 
 /**
  * Fixed Cells Gadget

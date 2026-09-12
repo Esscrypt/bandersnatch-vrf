@@ -6,7 +6,7 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import type { BitColumn } from './bit-column'
+import type { BitColumn } from './bit-column.ts'
 
 /**
  * Booleanity Gadget

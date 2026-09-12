@@ -7,11 +7,11 @@
 
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../../config/bandersnatch-vrf-config'
-import type { Domain } from '../domain/domain'
-import { FieldColumn } from '../domain/domain'
-import { AffineColumn } from '../gadgets/affine-column'
-import { Doubling } from '../gadgets/doubling'
+import { BANDERSNATCH_VRF_CONFIG } from '../../config/bandersnatch-vrf-config.ts'
+import type { Domain } from '../domain/domain.ts'
+import { FieldColumn } from '../domain/domain.ts'
+import { AffineColumn } from '../gadgets/affine-column.ts'
+import { Doubling } from '../gadgets/doubling.ts'
 
 /**
  * PIOP Parameters

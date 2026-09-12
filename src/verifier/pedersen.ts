@@ -11,13 +11,13 @@ import {
   BandersnatchCurve,
 } from '@pbnjam/bandersnatch'
 import { hexToBytes } from 'viem'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
 import {
   bytesToBigIntLittleEndian,
   curvePointToNoble,
   elligator2HashToCurve,
-} from '../crypto/elligator2'
-import { type PedersenVRFProof, PedersenVRFProver } from '../prover/pedersen'
+} from '../crypto/elligator2.ts'
+import { type PedersenVRFProof, PedersenVRFProver } from '../prover/pedersen.ts'
 
 /**
  * Pedersen VRF Verifier

@@ -9,11 +9,11 @@ import { readFileSync } from 'node:fs'
 import { hexToBytes } from 'viem'
 // Import WASM module (from ark-vrf, matches test vectors exactly)
 // The Node.js build auto-initializes when imported
-import { verify_ring_proof } from '../../wasm-ark-vrf/ark_vrf_wasm'
-import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config'
-import { PedersenVRFProver } from '../prover/pedersen'
-import type { RingVRFInput } from '../prover/ring-kzg'
-import { PedersenVRFVerifier } from './pedersen'
+import { verify_ring_proof } from '../../wasm-ark-vrf/ark_vrf_wasm.js'
+import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import type { RingVRFInput } from '../prover/ring-kzg.ts'
+import { PedersenVRFVerifier } from './pedersen.ts'
 
 /**
  * Replace null (all-zero) keys with the padding point.

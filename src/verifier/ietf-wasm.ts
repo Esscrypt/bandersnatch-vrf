@@ -5,8 +5,8 @@
  * that matches the reference implementation exactly.
  */
 
-import { verify_ietf_vrf } from '../../wasm-ark-vrf/ark_vrf_wasm'
-import { IETFVRFProver } from '../prover/ietf'
+import { verify_ietf_vrf } from '../../wasm-ark-vrf/ark_vrf_wasm.js'
+import { IETFVRFProver } from '../prover/ietf.ts'
 
 /** IETF proof layout: gamma (32) || c (32) || s (32) = 96 bytes. WASM expects gamma and c||s separately. */
 const GAMMA_LEN = 32

@@ -9,7 +9,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PedersenVRFProver } from '../prover/pedersen'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
 import { bytesToHex, hexToBytes } from 'viem'
 
 // Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_pedersen.json

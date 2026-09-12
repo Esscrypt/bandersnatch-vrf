@@ -7,7 +7,7 @@
  * @module gamma
  */
 
-import { pointToHashRfc9381 } from '../crypto/rfc9381'
+import { pointToHashRfc9381 } from '../crypto/rfc9381.ts'
 
 /**
  * Get the commitment (hash) from a gamma point using RFC-9381 point-to-hash

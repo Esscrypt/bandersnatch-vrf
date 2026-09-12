@@ -8,8 +8,8 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PedersenVRFProver, type PedersenVRFInput } from '../prover/pedersen'
-import { PedersenVRFVerifier } from '../verifier/pedersen'
+import { PedersenVRFProver, type PedersenVRFInput } from '../prover/pedersen.ts'
+import { PedersenVRFVerifier } from '../verifier/pedersen.ts'
 
 // Use our own safe bytesToHex function to avoid conflicts
 function bytesToHex(bytes: Uint8Array): string {

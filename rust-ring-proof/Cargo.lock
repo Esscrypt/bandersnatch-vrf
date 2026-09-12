@@ -535,6 +535,24 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 name = "pbnjam-ring-proof"
 version = "0.1.0"
 dependencies = [
+ "ark-ec",
+ "ark-ed-on-bls12-381-bandersnatch",
+ "ark-ff",
+ "ark-serialize",
+ "hex",
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "pbnjam-ring-proof-core",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
+name = "pbnjam-ring-proof-core"
+version = "0.1.0"
+dependencies = [
  "ark-bls12-381",
  "ark-ec",
  "ark-ed-on-bls12-381-bandersnatch",
@@ -544,13 +562,6 @@ dependencies = [
  "ark-std",
  "ark-transcript",
  "ark-vrf",
- "hex",
- "napi",
- "napi-build",
- "napi-derive",
- "serde",
- "serde_json",
- "sha2",
  "w3f-pcs 0.0.2",
  "w3f-plonk-common 0.0.2",
  "w3f-ring-proof 0.0.2",

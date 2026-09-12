@@ -6,7 +6,7 @@ import {
   hexToBytes,
   signEd25519,
   verifyEd25519,
-} from './core'
+} from './core.ts'
 
 const XANNOUNCE = new TextEncoder().encode('jam_announce')
 
@@ -46,7 +46,11 @@ export function verifyAnnouncementSignature(
 
   // Convert tranche number to bytes (8 bytes, little-endian)
   const trancheBytes = new Uint8Array(8)
-  new DataView(trancheBytes.buffer).setBigUint64(0, announcement.tranche, true)
+  new DataView(trancheBytes.buffer).setBigUint64(
+    0,
+    BigInt(announcement.tranche),
+    true,
+  )
 
   // Encode work report set (x_n)
   // This would typically be the serialized list of work reports
@@ -106,8 +110,8 @@ export function verifyAnnouncementSignature(
  */
 export function generateAnnouncementSignature(
   validatorSecretKey: Uint8Array,
-  workReports: Array<{ coreIndex: bigint; workReportHash: Hex }>,
-  tranche: bigint,
+  workReports: Array<{ coreIndex: number; workReportHash: Hex }>,
+  tranche: number,
   headerHash: Hex,
 ): Safe<Hex> {
   // Validate inputs
@@ -124,7 +128,7 @@ export function generateAnnouncementSignature(
 
     // Convert tranche number to bytes (8 bytes, little-endian)
     const trancheBytes = new Uint8Array(8)
-    new DataView(trancheBytes.buffer).setBigUint64(0, tranche, true)
+    new DataView(trancheBytes.buffer).setBigUint64(0, BigInt(tranche), true)
 
     // Encode work report set (x_n) according to Gray Paper:
     // encode{set{build{encode[2]{c} ∥ blake{w}}{wrc ∈ local_tranche_n}}}

@@ -16,14 +16,14 @@ import {
   Bandersnatch,
   BandersnatchCurve,
 } from '@pbnjam/bandersnatch'
-import { Domain } from '../plonk/domain/domain'
-import type { FixedColumnsCommitted } from '../plonk/piop/mod'
-import { PiopParams } from '../plonk/piop/params'
-import { PiopVerifier } from '../plonk/piop/verifier'
-import { SimplePlonkTranscript } from '../plonk/transcript/transcript'
-import { PlonkVerifier } from '../plonk/verifier'
-import { PedersenVRFProver } from '../prover/pedersen'
-import type { RingVRFInput, RingVRFProof } from '../prover/ring-kzg'
+import { Domain } from '../plonk/domain/domain.ts'
+import type { FixedColumnsCommitted } from '../plonk/piop/mod.ts'
+import { PiopParams } from '../plonk/piop/params.ts'
+import { PiopVerifier } from '../plonk/piop/verifier.ts'
+import { SimplePlonkTranscript } from '../plonk/transcript/transcript.ts'
+import { PlonkVerifier } from '../plonk/verifier.ts'
+import { PedersenVRFProver } from '../prover/pedersen.ts'
+import type { RingVRFInput, RingVRFProof } from '../prover/ring-kzg.ts'
 import {
   COMMITMENT_SIZE,
   deserializeProofStruct,
@@ -33,10 +33,10 @@ import {
   piopDomainSizeFromRingSize,
   SUITE_ID,
   serializeVerifierKey,
-} from '../prover/ring-kzg'
-import { commitPolynomialCoeffs } from '../utils/kzg-manual'
-import { loadSRSFromFile } from '../utils/srs-loader'
-import { PedersenVRFVerifier } from './pedersen'
+} from '../prover/ring-kzg.ts'
+import { commitPolynomialCoeffs } from '../utils/kzg-manual.ts'
+import { loadSRSFromFile } from '../utils/srs-loader.ts'
+import { PedersenVRFVerifier } from './pedersen.ts'
 
 /**
  * Ring VRF Verifier

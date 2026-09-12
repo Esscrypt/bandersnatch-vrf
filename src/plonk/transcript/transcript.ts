@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { sha256 } from '@noble/hashes/sha2.js'
-import type { ColumnsCommited, ColumnsEvaluated } from '../piop/mod'
+import type { ColumnsCommited, ColumnsEvaluated } from '../piop/mod.ts'
 
 const LABEL_INSTANCE = new TextEncoder().encode('instance')
 const LABEL_COMMITTED_COLS = new TextEncoder().encode('committed_cols')

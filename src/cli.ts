@@ -7,15 +7,15 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { bytesToHex } from 'viem'
-import { IETFVRFProver, type IETFVRFResult } from './prover/ietf'
-import { type PedersenVRFInput, PedersenVRFProver } from './prover/pedersen'
-import { type RingVRFInput, RingVRFProver } from './prover/ring-kzg'
-import { RingVRFProverWasm } from './prover/ring-kzg-wasm'
-import type { IETFVRFVerifier } from './verifier/ietf'
-import { IETFVRFVerifierWasm } from './verifier/ietf-wasm'
-import { PedersenVRFVerifier } from './verifier/pedersen'
-import { RingVRFVerifier } from './verifier/ring'
-import { RingVRFVerifierWasm } from './verifier/ring-wasm'
+import { IETFVRFProver, type IETFVRFResult } from './prover/ietf.ts'
+import { type PedersenVRFInput, PedersenVRFProver } from './prover/pedersen.ts'
+import { type RingVRFInput, RingVRFProver } from './prover/ring-kzg.ts'
+import { RingVRFProverWasm } from './prover/ring-kzg-wasm.ts'
+import type { IETFVRFVerifier } from './verifier/ietf.ts'
+import { IETFVRFVerifierWasm } from './verifier/ietf-wasm.ts'
+import { PedersenVRFVerifier } from './verifier/pedersen.ts'
+import { RingVRFVerifier } from './verifier/ring.ts'
+import { RingVRFVerifierWasm } from './verifier/ring-wasm.ts'
 
 /**
  * Convert hex string to Uint8Array

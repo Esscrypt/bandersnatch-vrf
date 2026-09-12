@@ -4,8 +4,8 @@
  * Represents a column of boolean values (bits) in evaluation form
  */
 
-import type { Domain } from '../domain/domain'
-import { FieldColumn } from '../domain/domain'
+import type { Domain } from '../domain/domain.ts'
+import { FieldColumn } from '../domain/domain.ts'
 
 /**
  * Bit column representing boolean values

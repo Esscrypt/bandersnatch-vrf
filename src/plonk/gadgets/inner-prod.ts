@@ -5,10 +5,10 @@
  */
 
 import { bls12_381 } from '@noble/curves/bls12-381.js'
-import type { Domain } from '../domain/domain'
-import { FieldColumn } from '../domain/domain'
-import type { DensePolynomial } from '../domain/polynomial'
-import { DensePolynomialImpl } from '../domain/polynomial'
+import type { Domain } from '../domain/domain.ts'
+import { FieldColumn } from '../domain/domain.ts'
+import type { DensePolynomial } from '../domain/polynomial.ts'
+import { DensePolynomialImpl } from '../domain/polynomial.ts'
 
 /**
  * Inner Product Gadget

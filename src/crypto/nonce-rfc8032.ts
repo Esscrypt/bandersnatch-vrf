@@ -11,7 +11,7 @@ import {
   mod,
   numberToBytesLittleEndian,
 } from '@pbnjam/bandersnatch'
-import { bytesToBigIntLittleEndian } from './elligator2'
+import { bytesToBigIntLittleEndian } from './elligator2.ts'
 
 /**
  * Generate nonce according to RFC-8032 (matches Rust implementation)
