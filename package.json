@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/Esscrypt/bandersnatch-vrf/issues"
   },
-  "version": "0.7.2-rc15",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "build": "bun run build:native && tsc",
@@ -32,8 +32,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@pbnjam/bandersnatch": "0.7.2-rc3",
-    "@pbnjam/types": "0.7.2-rc1",
+    "@pbnjam/bandersnatch": "0.8.0",
+    "@pbnjam/types": "0.8.0",
     "@noble/curves": "2.0.1",
     "@noble/ed25519": "3.0.0",
     "@noble/hashes": "2.0.1",
