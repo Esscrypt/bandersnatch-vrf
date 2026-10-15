@@ -1,5 +1,3 @@
-//! Spec A.2 hash-to-curve: RFC-9380 expand_message_xmd(SHA-512) + Elligator2 RO.
-//! Ported from packages/bandersnatch-vrf/src/crypto/elligator2.ts.
 use crate::vrf::codec::{SUITE_ID, TAG_HASH_TO_CURVE};
 use ark_ec::twisted_edwards::{MontCurveConfig, TECurveConfig};
 use ark_ec::{AffineRepr, CurveGroup};
@@ -8,7 +6,6 @@ use ark_ff::{BigInteger, Field, One, PrimeField, Zero};
 use sha2::{Digest, Sha512};
 
 const SHA512_OUTPUT_LEN: usize = 64;
-/// len_per_base_elem = ceil((MODULUS_BIT_SIZE + SEC_PARAM) / 8) = ceil((255 + 128) / 8) = 48.
 const LEN_PER_BASE_ELEM: usize = 48;
 
 pub fn hash_to_curve(msg: &[u8]) -> EdwardsAffine {
@@ -22,7 +19,6 @@ pub fn hash_to_curve(msg: &[u8]) -> EdwardsAffine {
     clear_cofactor(sum)
 }
 
-/// RFC-9380 §5.2 hash_to_field for two base-field elements (arkworks DefaultFieldHasher).
 fn hash_to_field(msg: &[u8], dst: &[u8]) -> [Fq; 2] {
     let len_in_bytes = 2 * LEN_PER_BASE_ELEM;
     let uniform = expand_message_xmd(msg, dst, len_in_bytes);
@@ -31,8 +27,6 @@ fn hash_to_field(msg: &[u8], dst: &[u8]) -> [Fq; 2] {
     [u0, u1]
 }
 
-/// RFC-9380 §5.3.1 expand_message_xmd with SHA-512.
-/// Z_pad uses arkworks block_size = len_per_base_elem (48), matching DefaultFieldHasher.
 fn expand_message_xmd(msg: &[u8], dst: &[u8], len_in_bytes: usize) -> Vec<u8> {
     let dst_prime = build_dst_prime(dst);
 
@@ -74,7 +68,6 @@ fn expand_message_xmd(msg: &[u8], dst: &[u8], len_in_bytes: usize) -> Vec<u8> {
     out
 }
 
-/// DST_prime = DST ‖ I2OSP(len(DST), 1), with RFC-9380 §5.3.3 oversize handling.
 fn build_dst_prime(dst: &[u8]) -> Vec<u8> {
     let normalized: Vec<u8> = if dst.len() > 255 {
         let mut h = Sha512::new();
@@ -90,8 +83,6 @@ fn build_dst_prime(dst: &[u8]) -> Vec<u8> {
     out
 }
 
-/// RFC-9380 §6.8.2 Elligator2 map for the Bandersnatch twisted Edwards curve.
-/// Mirrors arkworks `Elligator2Map::map_to_curve`.
 fn elligator2_map(element: Fq) -> EdwardsAffine {
     let k = <EdwardsConfig as MontCurveConfig>::COEFF_B;
     let j_on_k = <EdwardsConfig as ark_ec::hashing::curve_maps::elligator2::Elligator2Config>::COEFF_A_OVER_COEFF_B;
@@ -136,12 +127,10 @@ fn elligator2_map(element: Fq) -> EdwardsAffine {
     EdwardsAffine::new_unchecked(v, w)
 }
 
-/// RFC-9380 §4.1 sign-of-field: least significant bit of the canonical representation.
 fn parity(element: &Fq) -> bool {
     element.into_bigint().is_odd()
 }
 
-/// arkworks default clear_cofactor: multiply by the cofactor (4 for Bandersnatch).
 fn clear_cofactor(p: EdwardsAffine) -> EdwardsAffine {
     p.mul_by_cofactor()
 }

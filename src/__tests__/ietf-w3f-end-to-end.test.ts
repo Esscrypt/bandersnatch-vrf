@@ -1,13 +1,3 @@
-/**
- * IETF VRF W3F (napi-rs) End-to-End and Performance Tests
- *
- * Validates IETFVRFProverW3F and IETFVRFVerifierW3F against:
- *   1. Official bandersnatch-vrf-spec test vectors (exact gamma + proof round-trip)
- *   2. Cross-verification against the WASM baseline (IETFVRFVerifierWasm)
- *   3. Edge cases (empty input, large input, wrong key / wrong input rejection)
- *   4. Performance benchmark: 100 proves + 100 verifies, with per-op and total timing
- */
-
 import { describe, expect, test, beforeAll } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -17,10 +7,6 @@ import { IETFVRFVerifierW3F } from '../verifier/ietf-w3f.ts'
 import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm.ts'
 import { isRustIetfVrfProverAvailable, isRustIetfVrfVerifierAvailable } from '../prover/rust-ietf-vrf-wrapper.ts'
 import { getCommitmentFromGamma } from '../utils/gamma.ts'
-
-// ---------------------------------------------------------------------------
-// Test vectors
-// ---------------------------------------------------------------------------
 
 const testVectorsPath = join(
   __dirname,
@@ -52,20 +38,11 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes
 }
 
-// ---------------------------------------------------------------------------
-// Shared instances
-// ---------------------------------------------------------------------------
-
 const verifier = new IETFVRFVerifierW3F()
 const wasmVerifier = new IETFVRFVerifierWasm()
 
-// Fixed key pair used across performance / edge-case tests
 const PERF_SK = hexToBytes('3d6406500d4009fdf2604546093665911e753f2213570a29521fd88bc30ede18')
 const PERF_PK = hexToBytes('a1b1da71cc4682e159b7da23050d8b6261eb11a3247c89b07ef56ccd002fd38b')
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function hrNow(): bigint {
   return process.hrtime.bigint()
@@ -74,10 +51,6 @@ function hrNow(): bigint {
 function nsToMs(ns: bigint): number {
   return Number(ns) / 1_000_000
 }
-
-// ---------------------------------------------------------------------------
-// Suite
-// ---------------------------------------------------------------------------
 
 describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
   beforeAll(() => {
@@ -92,10 +65,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
     }
   })
 
-  // -------------------------------------------------------------------------
-  // 1. Test-vector prove + verify
-  // -------------------------------------------------------------------------
-
   describe('Test-vector prove and verify', () => {
     for (const [index, vector] of IETF_TEST_VECTORS.entries()) {
       test(`Vector ${index + 1}: ${vector.comment}`, () => {
@@ -106,34 +75,25 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
 
         const result = IETFVRFProverW3F.prove(sk, input, auxData)
 
-        // Structural checks
         expect(result.gamma.length).toBe(32)
         expect(result.proof.length).toBe(96)
-        // proof[0..32] must equal gamma
         expect(Array.from(result.proof.subarray(0, 32))).toEqual(
           Array.from(result.gamma),
         )
 
-        // Gamma must match test vector (ark-vrf Elligator2 h2c is deterministic)
         const actualGamma = bytesToHex(result.gamma).slice(2)
         expect(actualGamma).toBe(vector.gamma)
 
-        // Beta (hash of gamma) must match
         const beta = getCommitmentFromGamma(result.gamma)
         expect(beta.length).toBe(64)
         const actualBeta = bytesToHex(beta).slice(2)
         expect(actualBeta).toBe(vector.beta)
 
-        // W3F verifier must accept the proof
         const valid = verifier.verify(pk, input, result.proof, auxData)
         expect(valid).toBe(true)
       })
     }
   })
-
-  // -------------------------------------------------------------------------
-  // 2. Cross-verification: W3F prover ↔ WASM verifier  and vice-versa
-  // -------------------------------------------------------------------------
 
   describe('Cross-verification with WASM baseline', () => {
     for (const [index, vector] of IETF_TEST_VECTORS.entries()) {
@@ -145,16 +105,11 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
 
         const result = IETFVRFProverW3F.prove(sk, input, auxData)
 
-        // WASM verifier must also accept the W3F-generated proof
         const wasmValid = wasmVerifier.verify(pk, input, result.proof, auxData)
         expect(wasmValid).toBe(true)
       })
     }
   })
-
-  // -------------------------------------------------------------------------
-  // 3. Negative cases
-  // -------------------------------------------------------------------------
 
   describe('Negative cases', () => {
     test('Wrong public key is rejected', () => {
@@ -192,10 +147,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
     })
   })
 
-  // -------------------------------------------------------------------------
-  // 4. Edge cases
-  // -------------------------------------------------------------------------
-
   describe('Edge cases', () => {
     test('Empty input', () => {
       const emptyInput = new Uint8Array(0)
@@ -212,7 +163,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
     test('Proof without aux data verifies without aux data', () => {
       const input = new TextEncoder().encode('no-aux')
       const result = IETFVRFProverW3F.prove(PERF_SK, input)
-      // undefined auxData treated as empty bytes on both sides
       expect(verifier.verify(PERF_PK, input, result.proof)).toBe(true)
       expect(verifier.verify(PERF_PK, input, result.proof, new Uint8Array(0))).toBe(true)
     })
@@ -238,10 +188,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
     })
   })
 
-  // -------------------------------------------------------------------------
-  // 5. Performance: 100 proves + 100 verifies
-  // -------------------------------------------------------------------------
-
   describe('Performance (100 proves + 100 verifies)', () => {
     const NUM_OPS = 100
 
@@ -258,7 +204,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
 
         times.push(elapsed)
 
-        // Structural sanity check (no overhead assertions inside the hot loop)
         expect(result.proof.length).toBe(96)
       }
 
@@ -275,7 +220,6 @@ describe('IETFVRFProverW3F / IETFVRFVerifierW3F End-to-End Tests', () => {
     }, 120_000)
 
     test(`${NUM_OPS} IETF VRF verifies`, () => {
-      // Pre-generate proofs so timing is purely for verify
       const cases: { input: Uint8Array; aux: Uint8Array; proof: Uint8Array }[] =
         []
       for (let i = 0; i < NUM_OPS; i++) {

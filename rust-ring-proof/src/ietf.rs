@@ -1,11 +1,3 @@
-//! IETF VRF (RFC-9381) prove and verify via napi-rs.
-//!
-//! Matches the ark-vrf BandersnatchSha512Ell2 suite used by the WASM bindings.
-//! TypeScript handles serialization format validation; Rust handles the crypto.
-//!
-//! Proof wire format: gamma (32 bytes) || c (32 bytes) || s (32 bytes) = 96 bytes total.
-//! This matches the format produced and consumed by the TypeScript IETFVRFProver / IETFVRFVerifierWasm.
-
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 

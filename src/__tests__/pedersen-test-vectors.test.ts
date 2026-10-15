@@ -1,18 +1,9 @@
-/**
- * Pedersen VRF Test Vectors from ark-vrf
- * 
- * These test vectors are derived from the official ark-vrf implementation
- * and are designed to validate our Pedersen VRF implementation against
- * the reference Rust implementation.
- */
-
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PedersenVRFProver } from '../prover/pedersen.ts'
 import { bytesToHex, hexToBytes } from 'viem'
 
-// Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_pedersen.json
 const testVectorsPath = join(
   __dirname,
   './vectors/bandersnatch_sha-512_ell2_pedersen.json',
@@ -42,7 +33,6 @@ describe('Pedersen VRF Test Vector Validation', () => {
     test(`Test Vector ${index + 1}: ${vector.comment}`, () => {
       console.log(`\n=== Testing Pedersen Vector ${index + 1}: ${vector.comment} ===`)
       
-      // Convert hex strings to bytes (handle with or without 0x prefix)
       const skHex = vector.sk.startsWith('0x') ? vector.sk : `0x${vector.sk}`
       
       let alphaHex = '0x'
@@ -66,25 +56,21 @@ describe('Pedersen VRF Test Vector Validation', () => {
       console.log(`  Alpha (message): ${vector.alpha || '(empty)'}`)
       console.log(`  Additional Data: ${vector.ad || '(empty)'}`)
       
-      // Test our Pedersen VRF implementation
       try {
         const vrfResult = PedersenVRFProver.prove(
           privateKey,
           { input: alpha, auxData: additionalData }
         )
 
-        // Basic validation that our implementation produces valid structure
         expect(vrfResult).toBeDefined()
         expect(vrfResult.gamma).toBeInstanceOf(Uint8Array)
         expect(vrfResult.hash).toBeInstanceOf(Uint8Array)
         expect(vrfResult.proof).toBeInstanceOf(Uint8Array)
    
-        // Parse the Pedersen proof structure
         const deserializedProof = PedersenVRFProver.deserialize(vrfResult.proof)
         
-        // Validate actual values against expected test vectors
-        const ourGammaHex = bytesToHex(vrfResult.gamma).slice(2) // Remove 0x prefix
-        const ourBetaHex = bytesToHex(vrfResult.hash).slice(2) // Remove 0x prefix
+        const ourGammaHex = bytesToHex(vrfResult.gamma).slice(2)
+        const ourBetaHex = bytesToHex(vrfResult.hash).slice(2)
         const ourYBarHex = bytesToHex(deserializedProof.Y_bar).slice(2)
         const ourRHex = bytesToHex(deserializedProof.R).slice(2)
         const ourOkHex = bytesToHex(deserializedProof.O_k).slice(2)
@@ -92,7 +78,6 @@ describe('Pedersen VRF Test Vector Validation', () => {
         const ourSbHex = bytesToHex(deserializedProof.s_b).slice(2)
         
 
-        // Assert exact value matches with ark-vrf test vectors
         expect(ourGammaHex).toBe(vector.gamma)
         expect(ourBetaHex).toBe(vector.beta)
         expect(ourYBarHex).toBe(vector.proof_pk_com)
@@ -103,7 +88,7 @@ describe('Pedersen VRF Test Vector Validation', () => {
         
       } catch (error) {
         console.error(`Pedersen VRF implementation failed for ${vector.comment}:`, error)
-        throw error // Re-throw to fail the test
+        throw error
       }
     })
   }

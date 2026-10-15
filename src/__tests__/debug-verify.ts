@@ -66,7 +66,6 @@ const seed = PiopParams.getAccumulatorSeedPoint()
 const padding = PiopParams.getPaddingPoint()
 const piopParams = PiopParams.setup(domain, h, seed, padding)
 
-// Parse ring keys
 function hexToUint8(hex: string): Uint8Array {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex
   const bytes = new Uint8Array(clean.length / 2)
@@ -95,18 +94,14 @@ const keysToUse = parsedKeys.length <= maxRing ? parsedKeys : parsedKeys.slice(0
 
 const fixedColumns = piopParams.fixedColumns(keysToUse)
 
-// Compute blinding factor
 const pedersenResult = PedersenVRFProver.prove(secretKey, { input: inputBytes, auxData })
 const blindingScalar = bytesToBigIntLittleEndian(pedersenResult.blindingFactor)
 
-// Build PIOP prover
 const piopProver = PiopProver.build(piopParams, fixedColumns, proverIndex, blindingScalar)
 
-// Get the result (Y_bar) from the prover
 const resultXY = piopProver.result()
 console.log('piop.result() x:', resultXY.x.toString(16).slice(0, 20) + '...')
 
-// Compute ring commitment
 const prover = new RingVRFProver(srsFilePath, 8)
 const ringCommitmentBytes = prover.computeRingCommitment(ringKeys)
 const fixedColumnsCommitted: FixedColumnsCommitted = {
@@ -114,7 +109,6 @@ const fixedColumnsCommitted: FixedColumnsCommitted = {
   ringSelector: ringCommitmentBytes.slice(96, 144),
 }
 
-// --- Prover side ---
 const serVk = (vk: any) => {
   const buf = new Uint8Array(384)
   let o = 0
@@ -133,7 +127,6 @@ const verifierKeyObj = {
 }
 const vkBytes = serVk(verifierKeyObj)
 
-// Run prover
 const pcsCk = { srsG1Points, srsG1: srsResult.g1, srsG2: srsResult.g2, srsG2Tau: srsResult.g2Points[1]! }
 const proverTranscript = SimplePlonkTranscript.new(SUITE_ID)
 const plonkProver = PlonkProver.init(pcsCk, vkBytes, proverTranscript)
@@ -143,12 +136,10 @@ const proof = plonkProver.prove(piopProver)
 console.log('Proof generated successfully')
 console.log('linAtZetaOmega:', proof.linAtZetaOmega.toString(16).slice(0, 20) + '...')
 
-// --- Verifier side ---
 const pcsVk = { srsG1: srsResult.g1, srsG2: srsResult.g2, srsG2Tau: srsResult.g2Points[1]! }
 const verifierTranscript = SimplePlonkTranscript.new(SUITE_ID)
 const plonkVerifier = PlonkVerifier.init(pcsVk, vkBytes, verifierTranscript)
 
-// Get Y_bar bytes
 const pedersenComponents = PedersenVRFProver.deserialize(pedersenResult.proof)
 const yBar = pedersenComponents.Y_bar
 const keyCommitmentPoint = BandersnatchCurve.bytesToPoint(yBar)
@@ -163,7 +154,6 @@ console.log('  alphas[0]:', challenges.alphas[0]?.toString(16).slice(0, 20) + '.
 console.log('  nus[0]:', challenges.nus[0]?.toString(16).slice(0, 20) + '...')
 console.log('  nus[1]:', challenges.nus[1]?.toString(16).slice(0, 20) + '...')
 
-// seed + result
 const seedP = Bandersnatch.fromAffine({ x: piopParams.seed.x, y: piopParams.seed.y })
 const seedPlusResult = BandersnatchCurve.add(seedP, keyCommitmentPoint)
 
@@ -185,8 +175,5 @@ const piopVerifier = PiopVerifier.init(
 const qZeta = piopVerifier.evaluateQAtZeta(challenges.alphas, proof.linAtZetaOmega)
 console.log('\nqZeta:', qZeta.toString(16).slice(0, 20) + '...')
 
-// Compute what qZeta should be from the prover's quotient polynomial
-// qZeta_expected = quotientPoly.evaluate(zeta)
-// But we don't have access to quotientPoly here. Let's check the full verify instead.
 const verifyResult = plonkVerifier.verify(piopVerifier, proof, challenges)
 console.log('\nVerify result:', verifyResult)

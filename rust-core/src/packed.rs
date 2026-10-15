@@ -1,10 +1,3 @@
-//! Packed framing for the later C ABI. Named codecs only; the framer is private.
-//!
-//! Duplicated from `pbnjam-pvm-core` rather than introducing a third workspace
-//! crate. Format version byte `0x01`. Little-endian scalars. Blobs: `u32`
-//! length then bytes. Sequences: `u32` count then elements. Malformed input
-//! returns [`CodecError::Malformed`] (C ABI status `1`) and never panics.
-
 const FORMAT_VERSION: u8 = 0x01;
 const RING_COMMITMENT_LEN: usize = 144;
 const RING_KEY_COMMITMENT_LEN: usize = 32;

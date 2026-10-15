@@ -1,4 +1,3 @@
-//! Vector-driven tests for the self-contained bandersnatch VRF.
 use crate::vrf::codec;
 use ark_ed_on_bls12_381_bandersnatch::Fr;
 use ark_ff::{One, Zero};
@@ -18,7 +17,7 @@ fn codec_constants_and_scalars() {
     assert_eq!(bytes.len(), 32);
     assert_eq!(codec::dec_scalar(&bytes).unwrap(), s);
     let mut over = [0xffu8; 32];
-    assert!(codec::dec_scalar(&over).is_none()); // all-ones >= r
+    assert!(codec::dec_scalar(&over).is_none());
     over.fill(0);
     assert_eq!(codec::dec_scalar(&over).unwrap(), Fr::zero());
 
@@ -86,11 +85,9 @@ use crate::vrf::hash_to_curve::hash_to_curve;
 
 #[test]
 fn hash_to_curve_matches_vectors() {
-    // tiny/thin/pedersen vector-1: alpha = "" -> h
     let h0 = hash_to_curve(b"");
     assert_eq!(hex::encode(crate::vrf::codec::enc_point(&h0)),
         "f508a4e84812ee3dce73ef72bb9064308128384b4801f81ef8616a7dffc486bc", "alpha=empty");
-    // tiny vector-2: alpha = "0a" -> h
     let h = hash_to_curve(&hexd("0a"));
     assert_eq!(hex::encode(crate::vrf::codec::enc_point(&h)),
         "8ec04d55a790d47cd32c5062cb44517f164515dac88a8ea6d972db1a7da08abf", "alpha=0a");
@@ -108,7 +105,6 @@ fn blinding_base_is_valid_subgroup_point() {
 fn vrf_output_matches_vector_beta() {
     use crate::vrf::procedures::vrf_output;
     use crate::vrf::codec::dec_point;
-    // tiny vector-1: gamma (O) -> beta (32 bytes).
     let gamma = dec_point(&hexd("54421f7ffc399872f1cb868efbb7eef4034178f1e369cebfb964ca61e4f3f256").try_into().unwrap()).unwrap();
     let beta = vrf_output(&gamma, 32);
     assert_eq!(hex::encode(&beta),

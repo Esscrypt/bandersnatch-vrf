@@ -1,10 +1,3 @@
-/**
- * Rust napi-rs connector for IETF VRF (RFC-9381) prove and verify.
- *
- * Loads the same native module as rust-ring-proof-wrapper.
- * Falls back gracefully when the native module is not built.
- */
-
 import { loadIetfVrfNative } from './native-loader.ts'
 
 export type ProveIetfVrfRust = (
@@ -57,7 +50,6 @@ try {
     }
   }
 } catch {
-  // Native module not built or not available
 }
 
 export function getRustProveIetfVrf(): ProveIetfVrfRust | null {

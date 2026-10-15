@@ -1,9 +1,3 @@
-//! C ABI tests for `pbnjam-bvrf-ffi`.
-//!
-//! Production change that would fail these tests: dropping generation on
-//! release so a second `srs_release` returns 0, or letting a panic unwind
-//! instead of becoming status 5 with a drained last-error message.
-
 use pbnjam_bvrf_ffi::{
     pbnjam_bvrf_abi_version, pbnjam_bvrf_ietf_verify, pbnjam_bvrf_ring_batch_verify,
     pbnjam_bvrf_ring_prepare, pbnjam_bvrf_ring_release, pbnjam_bvrf_srs_open,

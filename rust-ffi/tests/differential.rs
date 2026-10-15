@@ -1,10 +1,3 @@
-//! Differential tests: Node-API core vs Bandersnatch C ABI.
-//!
-//! napi `verify_ietf_vrf` / `batch_verify_ring_vrf` wrap
-//! `pbnjam_ring_proof_core`. These tests call that core and the C ABI on the
-//! same IETF/ring vectors and require identical validity. Invalid proofs must
-//! return status 0 with a false byte, not an evaluation failure.
-
 use pbnjam_bvrf_ffi::{
     pbnjam_bvrf_ietf_verify, pbnjam_bvrf_ring_batch_verify, pbnjam_bvrf_ring_prepare,
     pbnjam_bvrf_ring_release, pbnjam_bvrf_srs_open, pbnjam_bvrf_srs_release,
@@ -267,8 +260,6 @@ fn differential_ring_invalid_proof_is_status_zero_false_on_both_paths() {
     let vectors = load_json("bandersnatch_sha-512_ell2_ring.json");
     let rows = vectors.as_array().expect("ring vector array");
     assert!(rows.len() >= 2, "need at least two ring vectors");
-    // Keep a deserializable proof shape (same pattern as the IETF invalid case):
-    // verify vector[0]'s ring against vector[1]'s proof and key commitment.
     let ring_keys = hex_to_bytes(rows[0]["ring_pks"].as_str().expect("ring_pks"));
     let proof = hex_to_bytes(rows[1]["ring_proof"].as_str().expect("ring_proof"));
     let key_commitment = hex_to_bytes(rows[1]["proof_pk_com"].as_str().expect("proof_pk_com"));

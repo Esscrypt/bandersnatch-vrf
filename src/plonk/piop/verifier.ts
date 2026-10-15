@@ -1,10 +1,3 @@
-/**
- * PIOP Verifier
- *
- * Implements the verifier side of Polynomial Interactive Oracle Proofs (PIOP)
- * Matches w3f-ring-proof/src/piop/verifier.rs
- */
-
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BooleanityValues } from '../gadgets/booleanity.ts'
 import { CondAddValues } from '../gadgets/cond-add.ts'
@@ -16,9 +9,6 @@ import type {
   RingEvaluations,
 } from './mod.ts'
 
-/**
- * Evaluated domain for verifier
- */
 export interface EvaluatedDomain {
   notLastRow: bigint
   lFirst: bigint
@@ -27,11 +17,6 @@ export interface EvaluatedDomain {
   vanishingPolynomialInv: bigint
 }
 
-/**
- * PIOP Verifier
- *
- * Verifies PIOP proofs by checking constraints
- */
 export class PiopVerifier {
   public static readonly N_CONSTRAINTS = 7
   public static readonly N_COLUMNS = 7
@@ -46,16 +31,6 @@ export class PiopVerifier {
   private readonly condAddAccX: FixedCellsValues
   private readonly condAddAccY: FixedCellsValues
 
-  /**
-   * Initialize PIOP verifier
-   *
-   * @param domainEvals - Evaluated domain values
-   * @param fixedColumnsCommitted - Committed fixed columns
-   * @param witnessColumnsCommitted - Committed witness columns
-   * @param allColumnsEvaluated - Evaluated column values
-   * @param init - Initial accumulator value (seed point coordinates)
-   * @param result - Result accumulator value (seed + result coordinates)
-   */
   static init(
     domainEvals: EvaluatedDomain,
     fixedColumnsCommitted: FixedColumnsCommitted,
@@ -98,8 +73,8 @@ export class PiopVerifier {
 
     const innerProdAcc = new FixedCellsValues(
       allColumnsEvaluated.innProdAcc,
-      0n, // col_first = 0
-      1n, // col_last = 1
+      0n,
+      1n,
       domainEvals.lFirst,
       domainEvals.lLast,
     )
@@ -139,9 +114,6 @@ export class PiopVerifier {
     this.condAddAccY = condAddAccY
   }
 
-  /**
-   * Get precommitted columns (fixed columns)
-   */
   precommittedColumns(): Uint8Array[] {
     return [
       this.fixedColumnsCommitted.points[0],
@@ -150,9 +122,6 @@ export class PiopVerifier {
     ]
   }
 
-  /**
-   * Evaluate constraints at main point
-   */
   evaluateConstraintsMain(): bigint[] {
     return [
       ...this.innerProd.evaluateConstraintsMain(),
@@ -164,11 +133,6 @@ export class PiopVerifier {
     ]
   }
 
-  /**
-   * Compute linearized polynomial commitment
-   *
-   * Combines witness column commitments with aggregated coefficients
-   */
   linPolyCommitment(aggCoeffs: bigint[]): Uint8Array {
     if (aggCoeffs.length !== PiopVerifier.N_CONSTRAINTS) {
       throw new Error(
@@ -178,14 +142,12 @@ export class PiopVerifier {
 
     const Fr = bls12_381.fields.Fr
 
-    // Inner product accumulator coefficient
     const innerProdAcc = this.witnessColumnsCommitted.innProdAcc
     const innerProdCoeff = Fr.mul(
       Fr.create(aggCoeffs[0]!),
       Fr.create(this.innerProd.notLast),
     )
 
-    // CondAdd accumulator coefficients
     const condAddAccX = this.witnessColumnsCommitted.condAddAcc[0]
     const condAddAccY = this.witnessColumnsCommitted.condAddAcc[1]
     const [cAccX1, cAccY1] = this.condAdd.accCoeffs1()
@@ -202,8 +164,6 @@ export class PiopVerifier {
       Fr.mul(Fr.create(aggCoeffs[2]!), Fr.create(cAccY2)),
     )
 
-    // Combine commitments: Σ(coeff_i * commitment_i)
-    // Matching Rust: C::combine(&[coeffs], &[commitments])
     const commitments: Uint8Array[] = [innerProdAcc, condAddAccX, condAddAccY]
     const commitmentCoeffs: bigint[] = [
       innerProdCoeff,
@@ -211,7 +171,6 @@ export class PiopVerifier {
       condAddYCoeff,
     ]
 
-    // Combine using MSM: Σ(coeff_i * C_i)
     let result = bls12_381.G1.Point.ZERO
 
     for (let i = 0; i < commitments.length; i++) {
@@ -223,15 +182,9 @@ export class PiopVerifier {
     return result.toBytes(true)
   }
 
-  /**
-   * Evaluate quotient polynomial at zeta
-   *
-   * Computes: q(zeta) = (eval + lin_at_zeta_omega) / vanishing_poly(zeta)
-   */
   evaluateQAtZeta(aggCoeffs: bigint[], linAtZetaOmega: bigint): bigint {
     const Fr = bls12_381.fields.Fr
 
-    // Evaluate linearization polynomial constant term
     const constraintEvals = this.evaluateConstraintsMain()
     let evalResult = Fr.ZERO
     for (let i = 0; i < constraintEvals.length; i++) {
@@ -240,19 +193,13 @@ export class PiopVerifier {
       evalResult = Fr.add(evalResult, Fr.mul(alpha, constraint))
     }
 
-    // Add linearization at zeta*omega
     const linAtZetaOmegaF = Fr.create(linAtZetaOmega)
     const numerator = Fr.add(evalResult, linAtZetaOmegaF)
 
-    // Divide by vanishing polynomial
-    // Matching Rust: self.domain_evaluated().divide_by_vanishing_poly_in_zeta(poly_in_zeta)
     const vanishingPolyInv = this.domainEvals.vanishingPolynomialInv
     return Fr.mul(numerator, vanishingPolyInv)
   }
 
-  /**
-   * Get evaluated domain
-   */
   domainEvaluated(): EvaluatedDomain {
     return this.domainEvals
   }

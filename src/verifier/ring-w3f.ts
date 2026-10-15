@@ -1,17 +1,7 @@
-/**
- * Ring VRF Verifier using Rust connector (native) or WASM bindings
- *
- * When a RingBackend is injected (ScriptC C ABI) or the default Node-API backend
- * resolves, ring membership goes through prepare + batchVerify. TypeScript still
- * handles Pedersen composition, null-key padding, and the 784-byte proof guard.
- * Falls back to ark-vrf WASM only when neither backend nor addon resolves.
- */
-
 import { readFileSync } from 'node:fs'
 import { hexToBytes } from 'viem'
 import {
   createNapiRingBackend,
-  loadWasmVerifyRingProof,
   type RingBackend,
   unwrapSyncBackendResult,
 } from '../backends.ts'
@@ -20,10 +10,6 @@ import { PedersenVRFProver } from '../prover/pedersen.ts'
 import type { RingVRFInput } from '../prover/ring-kzg.ts'
 import { PedersenVRFVerifier } from './pedersen.ts'
 
-/**
- * Replace null (all-zero) keys with the padding point.
- * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys.
- */
 function replaceNullKeyWithPadding(keyBytes: Uint8Array): Uint8Array {
   if (keyBytes.every((b) => b === 0)) {
     return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
@@ -50,28 +36,27 @@ function assertRingProofNotFullStructure(ringProofBytes: Uint8Array): void {
   }
 }
 
-/**
- * Ring VRF Verifier (W3F): injected/default backend when available, else WASM.
- * Same verify API as RingVRFVerifierWasm.
- */
 export class RingVRFVerifierW3F {
-  private readonly srsBytes: Uint8Array | null
-  private readonly backend: RingBackend | null
+  private readonly backend: RingBackend
 
   constructor(srsFilePath: string)
   constructor(options: { backend: RingBackend })
   constructor(srsFilePathOrOptions: string | { backend: RingBackend }) {
     if (typeof srsFilePathOrOptions === 'object') {
       this.backend = srsFilePathOrOptions.backend
-      this.srsBytes = null
       return
     }
-    this.srsBytes = readFileSync(srsFilePathOrOptions)
-    this.backend = createNapiRingBackend(this.srsBytes)
+    const srsBytes = readFileSync(srsFilePathOrOptions)
+    const backend = createNapiRingBackend(srsBytes)
+    if (!backend) {
+      throw new Error(
+        'RingVRFVerifierW3F requires the native ring VRF backend; build packages/bandersnatch-vrf native bindings',
+      )
+    }
+    this.backend = backend
   }
 
   async init(): Promise<void> {
-    // No-op; kept for API compatibility
   }
 
   verify(
@@ -106,54 +91,25 @@ export class RingVRFVerifierW3F {
       result.proof.pedersenProof,
     ).Y_bar
 
-    if (this.backend) {
-      try {
-        const prepared = unwrapSyncBackendResult(
-          this.backend.prepare(ringKeysBytes),
-          'RingBackend.prepare',
-        )
-        return unwrapSyncBackendResult(
-          this.backend.batchVerify(prepared.ring, ringKeys.length, [
-            { proof: ringProofBytes, keyCommitment: keyCommitmentBytes },
-          ]),
-          'RingBackend.batchVerify',
-        )
-      } catch (error) {
-        console.error('[RingVRFVerifierW3F] backend verify failed', {
-          error: error instanceof Error ? error.message : String(error),
-        })
-        return false
-      }
-    }
-
-    if (!this.srsBytes) {
-      console.error('[RingVRFVerifierW3F] WASM verify requires SRS bytes')
-      return false
-    }
-
     try {
-      const verifyRingProof = loadWasmVerifyRingProof()
-      return verifyRingProof(
-        this.srsBytes,
-        ringProofBytes,
-        ringKeysBytes,
-        keyCommitmentBytes,
-        ringKeys.length,
+      const prepared = unwrapSyncBackendResult(
+        this.backend.prepare(ringKeysBytes),
+        'RingBackend.prepare',
+      )
+      return unwrapSyncBackendResult(
+        this.backend.batchVerify(prepared.ring, ringKeys.length, [
+          { proof: ringProofBytes, keyCommitment: keyCommitmentBytes },
+        ]),
+        'RingBackend.batchVerify',
       )
     } catch (error) {
-      console.error('[RingVRFVerifierW3F] WASM verify failed', {
+      console.error('[RingVRFVerifierW3F] backend verify failed', {
         error: error instanceof Error ? error.message : String(error),
       })
       return false
     }
   }
 
-  /**
-   * Verify many ring VRF proofs that share one ring in a single aggregated pairing check.
-   * The per-entry Pedersen check stays per-entry (it has no pairing); only the ring-membership
-   * proofs are batched. Returns true only if every entry is valid. Falls back to per-entry
-   * `verify` when no backend is available.
-   */
   verifyBatch(
     ringKeys: Uint8Array[],
     entries: Array<{
@@ -170,12 +126,6 @@ export class RingVRFVerifierW3F {
     }>,
   ): boolean {
     if (entries.length === 0) return true
-
-    if (!this.backend) {
-      return entries.every((e) =>
-        this.verify(ringKeys, e.input, e.result, e.auxData),
-      )
-    }
 
     const items: Array<{ proof: Uint8Array; keyCommitment: Uint8Array }> = []
     for (const e of entries) {

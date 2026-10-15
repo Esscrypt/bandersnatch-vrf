@@ -1,11 +1,3 @@
-/**
- * Conditional Addition Gadget Tests
- * 
- * Based on w3f-plonk-common/src/gadgets/ec/te_cond_add.rs test_te_cond_add_gadget()
- * 
- * Tests conditional point addition gadget correctness
- */
-
 import { describe, test, expect } from 'bun:test'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { Domain } from '../../domain/domain.ts'
@@ -20,10 +12,6 @@ import { BANDERSNATCH_PARAMS, mod, modInverse } from '@pbnjam/bandersnatch'
 
 const Fr = bls12_381.fields.Fr
 
-/**
- * Add two points using Twisted Edwards formula
- * Matching CondAdd.addPoints logic
- */
 function addPoints(
   p1: { x: bigint; y: bigint },
   p2: { x: bigint; y: bigint },
@@ -49,9 +37,6 @@ function addPoints(
   return { x: x3, y: y3 }
 }
 
-/**
- * Convert constraint evaluations to polynomial
- */
 function interpolateConstraint(
   evals: bigint[],
   domain: Domain,
@@ -63,11 +48,8 @@ function interpolateConstraint(
   const { omegaInv } = getOmegaForDomain(domain4xSize, Fr)
   const coeffs = ifftFieldElements(evals, domain4xSize, omegaInv, Fr)
   
-  // Truncate to expected degree to avoid aliasing artifacts
-  // Rust's interpolate_by_ref() produces a polynomial of exactly the expected degree
   const truncatedCoeffs = coeffs.slice(0, expectedMaxDegree + 1)
   
-  // Pass expectedMaxDegree to ensure exact degree matching Rust
   return new DensePolynomialImpl(truncatedCoeffs, expectedMaxDegree)
 }
 
@@ -76,60 +58,37 @@ function testCondAddGadget(hiding: boolean) {
   const n = 2 ** logN
   const domain = new Domain(n, hiding)
 
-  // Get accumulator seed point (matching Rust: EdwardsAffine::generator())
   const seed = PiopParams.getAccumulatorSeedPoint()
 
-  // Generate random bitmask and points
   const bitmask = randomBitVec(domain.capacity - 1, 0.5)
   const points: Array<{ x: bigint; y: bigint }> = []
   for (let i = 0; i < domain.capacity - 1; i++) {
     points.push(randomPoint())
   }
 
-  // Compute expected result: seed + cond_sum(bitmask, points)
-  // Rust: let expected_res = seed + cond_sum(&bitmask, &points);
   const condSumResult = condSum(bitmask, points)
   
-  // Add seed to condSumResult using curve addition
-  // We need to use the same addition logic as CondAdd
   const expectedRes = addPoints(seed, condSumResult)
 
-  // Create bitmask and points columns
   const bitmaskCol = BitColumn.init(bitmask, domain)
   const pointsCol = AffineColumn.privateColumn(points, domain)
 
-  // Create conditional addition gadget
   const gadget = CondAdd.init(bitmaskCol, pointsCol, seed, domain)
 
-  // Verify final accumulator matches expected result
-  // Rust: let res = gadget.acc.points.last().unwrap();
-  //       assert_eq!(res, &expected_res);
   const accPoints = gadget.acc.points
   const finalAcc = accPoints[accPoints.length - 1]!
 
-  // Compare results - finalAcc should equal expectedRes
   expect(Fr.eql(Fr.create(finalAcc.x), Fr.create(expectedRes.x))).toBe(true)
   expect(Fr.eql(Fr.create(finalAcc.y), Fr.create(expectedRes.y))).toBe(true)
 
-  // Verify constraint polynomials
-  // Rust: assert_eq!(c1.degree(), 4 * n - 3);
-  //       assert_eq!(c2.degree(), 4 * n - 3);
   const constraints = gadget.constraints()
   const c1 = interpolateConstraint(constraints[0]!, domain)
   const c2 = interpolateConstraint(constraints[1]!, domain)
 
-  // Rust: assert_eq!(c1.degree(), 4 * n - 3);
-  //       assert_eq!(c2.degree(), 4 * n - 3);
-  // Note: The constraint polynomial can have trailing zeros naturally,
-  // so we check that the degree is at most 4*n-3, not exactly 4*n-3
   const expectedMaxDegree = 4 * n - 3
-  // Rust's test expects exactly 4*n - 3
-  // We ensure this by passing expectedMaxDegree to DensePolynomialImpl,
-  // which keeps zeros up to that degree to match Rust's exact degree requirement
   expect(c1.degree).toBe(expectedMaxDegree)
   expect(c2.degree).toBe(expectedMaxDegree)
 
-  // Verify constraints divide by vanishing polynomial
   const quotient1 = domain.divideByVanishingPoly(c1)
   const quotient2 = domain.divideByVanishingPoly(c2)
   expect(quotient1.degree).toBeGreaterThanOrEqual(0)

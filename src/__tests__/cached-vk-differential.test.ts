@@ -1,8 +1,3 @@
-/**
- * Differential test: cached-VerifierKey ring verify must agree byte-for-byte (in accept/reject)
- * with the legacy single-shot `verifyRingVrf`, on valid and tampered inputs.
- */
-
 import { describe, it, expect } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -29,8 +24,6 @@ function loadFixture() {
   return { srs, ringKeys, ringSize, proof, kc }
 }
 
-// The TS verifier wrappers map a native throw (e.g. malformed bytes) to a rejection (`false`).
-// Apply the same mapping here so the two paths are compared on equal footing.
 function asReject(fn: () => boolean): boolean {
   try {
     return fn()

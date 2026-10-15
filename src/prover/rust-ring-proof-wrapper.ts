@@ -1,13 +1,7 @@
-/**
- * Rust connector for ring proof (w3f ring proof lines 299-316).
- * Validations and serialization (to output format) are in TypeScript.
- */
-
 import { loadRingProofNative } from './native-loader.ts'
 
 const KEY_SIZE = 32
 const BLINDING_FACTOR_SIZE = 32
-/** Ring commitment: cx (48) + cy (48) + selector (48) */
 export const RING_COMMITMENT_SIZE = 144
 
 export interface ComputeRingCommitmentInputs {
@@ -15,10 +9,6 @@ export interface ComputeRingCommitmentInputs {
   ringKeysBytes: Uint8Array
 }
 
-/**
- * Validate compute_ring_commitment inputs (ark-vrf algorithm: ring_size from keys).
- * Throws if any check fails.
- */
 export function validateComputeRingCommitmentInputs(
   inputs: ComputeRingCommitmentInputs,
 ): void {
@@ -32,10 +22,6 @@ export function validateComputeRingCommitmentInputs(
   }
 }
 
-/**
- * Validate and construct ring commitment output (144 bytes: cx + cy + selector).
- * Throws if buffer length is not RING_COMMITMENT_SIZE.
- */
 export function serializeCommitmentToOutput(
   commitmentBytes: Buffer | Uint8Array,
 ): Uint8Array {
@@ -55,10 +41,6 @@ export interface ProveRingProofInputs {
   proverIndex: number
 }
 
-/**
- * Validate prove_ring_proof inputs (matches Rust lib.rs: srs, ring_keys, blinding_factor, prover_index).
- * Throws if any check fails.
- */
 export function validateProveRingProofInputs(
   inputs: ProveRingProofInputs,
 ): void {
@@ -83,10 +65,6 @@ export function validateProveRingProofInputs(
   }
 }
 
-/**
- * Serialize proof bytes to output format (moved from Rust lib.rs lines 110-116).
- * Takes raw proof bytes from Rust and returns the final Uint8Array for the caller.
- */
 export function serializeProofToOutput(
   proofBytes: Buffer | Uint8Array,
 ): Uint8Array {
@@ -102,10 +80,6 @@ export interface VerifyRingVrfInputs {
   keyCommitmentBytes: Uint8Array
 }
 
-/**
- * Validate verify_ring_vrf inputs (ring proof + key commitment Y_bar).
- * Throws if any check fails.
- */
 export function validateVerifyRingVrfInputs(inputs: VerifyRingVrfInputs): void {
   if (!inputs.srsBytes.length) {
     throw new Error('SRS bytes cannot be empty')
@@ -279,7 +253,6 @@ try {
     }
   }
 } catch {
-  // Native module not built or not available
 }
 
 export function getRustProveRingProof(): ProveRingProofRust | null {

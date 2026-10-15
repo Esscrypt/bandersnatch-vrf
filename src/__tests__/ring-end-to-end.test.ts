@@ -1,10 +1,3 @@
-/**
- * Ring VRF End-to-End Tests (Pure TypeScript)
- *
- * Tests the pure TypeScript ring VRF prover (ring-kzg.ts) and verifier (ring.ts)
- * against the standard test vectors.
- */
-
 import { describe, expect, test, beforeAll } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -117,13 +110,11 @@ describe('Ring VRF End-to-End Tests (Pure TypeScript)', () => {
       test(`Vector ${index + 1}: Pure TS prove/verify + benchmark`, () => {
         const { secretKey, ringInput } = prepareRingInput(vector)
 
-        // ----- Prove -----
         let proof: ReturnType<RingVRFProver['prove']>
         const proveMs = timeMs(() => {
           proof = prover.prove(secretKey, ringInput)
         })
 
-        // ----- Verify -----
         const verificationInput: RingVRFInput = {
           input: ringInput.input,
           auxData: ringInput.auxData,
@@ -140,13 +131,11 @@ describe('Ring VRF End-to-End Tests (Pure TypeScript)', () => {
           )
         })
 
-        // ----- Benchmark output -----
         console.log(`\n--- Benchmark (${vector.comment}) ---`)
         console.log(`  Pure TS: prove ${proveMs.toFixed(2)} ms, verify ${verifyMs.toFixed(2)} ms`)
 
         expect(verifyOk).toBe(true)
 
-        // ----- Exact value matching (Pedersen VRF outputs are deterministic) -----
         const actualGamma = bytesToHex(proof!.gamma).slice(2)
         const actualBeta = bytesToHex(getCommitmentFromGamma(proof!.gamma)).slice(2)
         const actualBanderout = bytesToHex(getBanderoutFromGamma(proof!.gamma)).slice(2)

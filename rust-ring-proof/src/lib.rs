@@ -1,26 +1,9 @@
-//! Rust connector for ring proof generation and IETF VRF.
-//!
-//! Ring proof: handles core logic (RingPiopParams::setup, index, RingProver::init, prove).
-//! IETF VRF: handles RFC-9381 prove and verify via ark-vrf BandersnatchSha512Ell2 suite.
-//! TypeScript handles: validations, deserialization error handling, and proof serialization.
-
 pub mod ietf;
 pub mod vrf;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use pbnjam_ring_proof_core::RingBatchItemBytes;
-
-///
-
-
-///
-
-
-
-
-
-///
 
 #[napi]
 pub fn prove_ring_proof(
@@ -39,36 +22,12 @@ pub fn prove_ring_proof(
     .map_err(|e| Error::from_reason(e.to_string()))
 }
 
-///
-
-
-
-
-
-///
-
-
-
-///
-
-
 #[napi]
 pub fn compute_ring_commitment(srs_bytes: Buffer, ring_keys_bytes: Buffer) -> Result<Buffer> {
     pbnjam_ring_proof_core::compute_ring_commitment(srs_bytes.as_ref(), ring_keys_bytes.as_ref())
         .map(Buffer::from)
         .map_err(|e| Error::from_reason(e.to_string()))
 }
-
-///
-
-
-///
-
-
-
-
-///
-
 
 #[napi]
 pub fn verify_ring_vrf(
@@ -117,11 +76,6 @@ pub struct RingBatchItem {
     pub proof_bytes: Buffer,
     pub key_commitment_bytes: Buffer,
 }
-
-///
-
-
-
 
 #[napi]
 pub fn batch_verify_ring_vrf(

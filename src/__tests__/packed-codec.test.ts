@@ -19,10 +19,7 @@ import {
   encodeBvrfValidity,
 } from '../packed.ts'
 
-const FIXTURES = new URL(
-  '../../../../packages/pvm-rust/core/testdata/packed/',
-  import.meta.url,
-)
+const FIXTURES = new URL('../../test-data/packed/', import.meta.url)
 
 function fixture(name: string): Buffer {
   return readFileSync(new URL(name, FIXTURES))

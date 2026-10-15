@@ -1,8 +1,3 @@
-//! IETF VRF (RFC-9381) prove and verify.
-//!
-//! Matches the ark-vrf BandersnatchSha512Ell2 suite used by the WASM bindings.
-//! Proof wire format: gamma (32 bytes) || c (32 bytes) || s (32 bytes) = 96 bytes total.
-
 use ark_ed_on_bls12_381_bandersnatch::Fr;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_vrf::{
@@ -14,7 +9,7 @@ use ark_vrf::{
 use crate::CoreError;
 
 const GAMMA_LEN: usize = 32;
-const PROOF_TOTAL_LEN: usize = 96; // gamma (32) + c (32) + s (32)
+const PROOF_TOTAL_LEN: usize = 96;
 
 pub fn prove_ietf_vrf(
     secret_key: &[u8],

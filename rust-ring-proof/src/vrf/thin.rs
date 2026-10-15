@@ -1,4 +1,3 @@
-//! Spec §3 Thin VRF. Proof = (R, s); R stores the nonce commitment (batch-verifiable).
 use crate::vrf::codec::{generator, TAG_THIN_VRF};
 use crate::vrf::procedures::{challenge, is_valid_point, nonce, vrf_transcript, Pair};
 use ark_ec::CurveGroup;

@@ -1,10 +1,3 @@
-/**
- * Ring VRF End-to-End Tests
- * 
- * Tests complete proof generation and verification workflow using test vectors
- * from the bandersnatch-vrf-spec
- */
-
 import { describe, expect, test, beforeAll } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -15,7 +8,6 @@ import { PedersenVRFProver } from '../prover/pedersen.ts'
 import { getBanderoutFromGamma, getCommitmentFromGamma } from '../utils/gamma.ts'
 import type { RingVRFInput } from '../prover/ring-kzg.ts'
 
-// Load test vectors from bandersnatch-vrf-spec/assets/vectors/bandersnatch_sha-512_ell2_ring.json
 const testVectorsPath = join(
   __dirname,
   './vectors/bandersnatch_sha-512_ell2_ring.json',
@@ -43,10 +35,8 @@ const RING_TEST_VECTORS = JSON.parse(
   ring_proof: string
 }>
 
-// Helper function to parse ring public keys
 function parseRingKeys(ringPksHex: string): Uint8Array[] {
-  const keySize = 32 // Each compressed public key is 32 bytes
-  // Ensure hex string has 0x prefix for viem's hexToBytes
+  const keySize = 32
   const normalizedHex = ringPksHex.startsWith('0x') ? ringPksHex : `0x${ringPksHex}`
   const ringPksBytes = hexToBytes(normalizedHex as Hex)
   const keys: Uint8Array[] = []
@@ -58,14 +48,12 @@ function parseRingKeys(ringPksHex: string): Uint8Array[] {
   return keys
 }
 
-// Utility class for Ring VRF test vector handling
 class RingTestVectorUtils {
   static prepareRingInput(vector: typeof RING_TEST_VECTORS[0]): {
     secretKey: Uint8Array
     publicKey: Uint8Array
     ringInput: RingVRFInput
   } {
-    // Normalize hex strings to have 0x prefix for viem's hexToBytes
     const skHex = vector.sk.startsWith('0x') ? vector.sk : `0x${vector.sk}`
     const pkHex = vector.pk.startsWith('0x') ? vector.pk : `0x${vector.pk}`
     
@@ -84,7 +72,6 @@ class RingTestVectorUtils {
     const inputBytes = hexToBytes(alphaHex as `0x${string}`)
     const auxData = hexToBytes(adHex as `0x${string}`)
     
-    // Parse ring public keys
     const ringKeys = parseRingKeys(vector.ring_pks)
     
     console.log(`Ring size: ${ringKeys.length}`)
@@ -94,7 +81,6 @@ class RingTestVectorUtils {
       console.log(`  Key ${i}: ${bytesToHex(key)}`)
     }
     
-    // Find prover index in ring
     let proverIndex = -1
     for (let i = 0; i < ringKeys.length; i++) {
       if (bytesToHex(ringKeys[i]) === bytesToHex(publicKey)) {
@@ -109,7 +95,6 @@ class RingTestVectorUtils {
     
     console.log(`Prover index in ring: ${proverIndex}`)
     
-    // Create ring input (using the prover's expected interface)
     const ringInput: RingVRFInput = {
       input: inputBytes,
       auxData: auxData,
@@ -133,7 +118,6 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
   
   beforeAll(async () => {
     const srsFilePath = join(__dirname, 'test-data/srs/zcash-srs-2-11-uncompressed.bin')
-    // Wait for WASM initialization to complete
     ringProver = new RingVRFProverW3F(srsFilePath)
     await ringProver.init()
     
@@ -146,23 +130,15 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
       test(`Vector ${index + 1}: Exact value comparison with test vector`, async () => {
         console.log(`\n=== Exact Value Matching for ${vector.comment} ===`)
         
-        // Parse test vector data
         const { secretKey, ringInput } = RingTestVectorUtils.prepareRingInput(vector)
         
-        // Skip if prover not initialized
-        // if (!ringProver || !ringVerifier) {
-        //   console.log('⚠️ Skipping value matching - Ring VRF prover not initialized')
-        //   return
-        // }
         
         try {
-          // ----- Benchmark: prove -----
           let proofResult!: Awaited<ReturnType<RingVRFProverW3F['prove']>>
           const proveMs = timeMs(() => {
             proofResult = ringProver.prove(secretKey, ringInput)
           })
 
-          // ----- Benchmark: verify -----
           const verificationInputForBench: RingVRFInput = {
             input: ringInput.input,
             auxData: ringInput.auxData,
@@ -181,10 +157,9 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`\n--- Benchmark (${vector.comment}) ---`)
           console.log(`  W3F: prove ${proveMs.toFixed(2)} ms, verify ${verifyMs.toFixed(2)} ms`)
 
-          // ===== VRF Output Values (Exact Match Required) =====
-          const actualGamma = bytesToHex(proofResult.gamma).slice(2) // Remove 0x
-          const actualBeta = bytesToHex(getCommitmentFromGamma(proofResult.gamma)).slice(2) // Remove 0x
-          const actualBanderout = bytesToHex(getBanderoutFromGamma(proofResult.gamma)).slice(2) // Remove 0x
+          const actualGamma = bytesToHex(proofResult.gamma).slice(2)
+          const actualBeta = bytesToHex(getCommitmentFromGamma(proofResult.gamma)).slice(2)
+          const actualBanderout = bytesToHex(getBanderoutFromGamma(proofResult.gamma)).slice(2)
           
           console.log(`\n--- VRF Output Values ---`)
           console.log(`Expected gamma: ${vector.gamma}`)
@@ -195,10 +170,6 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`Actual beta:    ${actualBeta}`)
           console.log(`Beta matches:   ${actualBeta === vector.beta}`)
           
-          // ===== Blinding Factor (for debugging) =====
-          // The blinding factor is used in ring proof generation
-          // If it doesn't match, the ring proof will be different
-          // Compute blinding factor separately to compare with test vector
           const I = PedersenVRFProver.hashToCurve(ringInput.input)
           const computedBlindingFactor = PedersenVRFProver.generateBlindingFactor(
             secretKey,
@@ -213,19 +184,16 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`Actual:   ${actualBlindingFactor}`)
           console.log(`Matches:  ${actualBlindingFactor === expectedBlindingFactor}`)
           
-          // Assert exact value matches with test vectors
           expect(actualGamma).toBe(vector.gamma)
           expect(actualBeta).toBe(vector.beta)
-          expect(actualBanderout).toBe(vector.beta.slice(0, 64)) // banderout is first 32 bytes of beta
-          expect(actualBlindingFactor).toBe(expectedBlindingFactor) // Blinding factor must match for ring proof to match
+          expect(actualBanderout).toBe(vector.beta.slice(0, 64))
+          expect(actualBlindingFactor).toBe(expectedBlindingFactor)
           
-          // ===== Pedersen Proof Components (Exact Match Required) =====
           const pedersenProofBytes = proofResult.proof.pedersenProof
           if (!pedersenProofBytes) {
             throw new Error('Pedersen proof not found in result')
           }
           
-            // Deserialize the Pedersen proof to get individual components
             const pedersenProof = PedersenVRFProver.deserialize(pedersenProofBytes)
 
             const actualProofPkCom = bytesToHex(pedersenProof.Y_bar).slice(2)
@@ -243,18 +211,12 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`Actual proof_r:   ${actualProofR}`)
           console.log(`Matches: ${actualProofR === vector.proof_r}`)
             
-            // Assert exact value matches for proof components
             expect(actualProofPkCom).toBe(vector.proof_pk_com)
             expect(actualProofR).toBe(vector.proof_r)
             expect(actualProofOk).toBe(vector.proof_ok)
             expect(actualProofS).toBe(vector.proof_s)
             expect(actualProofSb).toBe(vector.proof_sb)
           
-          // ===== Ring Commitment (FixedColumnsCommitted - Exact Match Required) =====
-          // Compute ring commitment using WASM computeRingCommitment (returns 144 bytes)
-          // The WASM implementation uses the Rust reference, which should match test vectors exactly
-          // IMPORTANT: Use keys in the exact order from test vector (ring_pks field)
-          // The test vectors were generated with keys in this specific order
           const computedRingCommitment = ringProver.computeRingCommitment(ringInput.ringKeys)
           const expectedRingCommitment = hexToBytes(`0x${vector.ring_pks_com}`)
           
@@ -267,9 +229,8 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           console.log(`Using Rust reference implementation via WASM`)
           console.log(`Should match test vectors exactly`)
           
-          expect(computedRingCommitment.length).toBe(144) // FixedColumnsCommitted: cx[48] + cy[48] + selector[48]
+          expect(computedRingCommitment.length).toBe(144)
           
-          // With WASM (Rust reference), the commitment should match exactly
           const computedHex = bytesToHex(computedRingCommitment).slice(2)
           const expectedHex = bytesToHex(expectedRingCommitment).slice(2)
           
@@ -281,12 +242,8 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
             console.log(`   Actual:   ${computedHex.slice(0, 64)}...`)
           }
           
-          // Assert exact match (WASM should match Rust reference)
           expect(computedRingCommitment).toEqual(expectedRingCommitment)
           
-          // ===== Ring Proof (Exact Match Required) =====
-          // NOTE: Ring proof depends on ring commitment, so it will also fail until
-          // Lagrangian SRS conversion is implemented
           if (proofResult.proof.ringProof) {
             const actualRingProof = bytesToHex(proofResult.proof.ringProof).slice(2)
             const expectedRingProof = vector.ring_proof
@@ -299,21 +256,17 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
             console.log(`\n--- Ring Proof Comparison (WASM) ---`)
             console.log(`Using Rust reference implementation via WASM`)
             
-            // With WASM (Rust reference), the proof should match exactly
             if (actualRingProof === expectedRingProof) {
               console.log(`✅ Ring proof matches test vector exactly!`)
             } else {
               console.log(`⚠️  Ring proof mismatch (investigating...)`)
             }
             
-            // Assert exact match (WASM should match Rust reference)
             expect(actualRingProof).toBe(expectedRingProof)
           }
           
-          // Verify structure
           expect(proofResult.gamma.length).toBe(32)
           
-          // ===== Verification (Must Pass) =====
           console.log(`\n--- Verification ---`)
           const verificationInput: RingVRFInput = {
             input: ringInput.input,
@@ -347,7 +300,7 @@ describe('Ring VRF End-to-End Tests (Native)', () => {
           
         } catch (error) {
           console.log(`\n❌ Value matching error: ${error}`)
-          throw error // Fail the test on mismatch
+          throw error
         }
       }, { timeout: 1000_000 })
     }

@@ -1,8 +1,3 @@
-//! Runtime-agnostic ring proof and IETF VRF core.
-//!
-//! Holds the ark-vrf / w3f-ring-proof work previously inlined in the `#[napi]` bodies of
-//! `rust-ring-proof`. No `napi` types. Consumed by the Node-API cdylib and later by the C ABI.
-
 mod batch;
 mod padding;
 pub mod ietf;

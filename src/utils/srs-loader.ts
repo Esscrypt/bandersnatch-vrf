@@ -1,38 +1,8 @@
-/**
- * SRS (Structured Reference String) Loader for Ring VRF
- *
- * Loads and parses Zcash powers of tau SRS files for use with MSM-based ring commitments.
- * The SRS file contains BLS12-381 G1 points in arkworks serialization format.
- */
-
 import { existsSync, readFileSync } from 'node:fs'
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import type { Safe } from '@pbnjam/types'
 import { safeError, safeResult } from '@pbnjam/types'
 
-/**
- * Load SRS from file and extract G1 and G2 points
- *
- * The SRS file format (arkworks PcsParams):
- * - Format: [u64 G1_length][G1 points...][u64 G2_length][G2 points...]
- * - Supports both compressed (G1=48, G2=96) and uncompressed (G1=96, G2=192) formats.
- *   Format is auto-detected from file layout. Points are always returned in compressed form.
- *
- * **Why many G1 points but only 2 G2 points?**
- *
- * - **G1 points (powers_in_g1)**: For KZG polynomial commitments, you need one G1 point per
- *   polynomial coefficient. For domain size n, you need n G1 points: [G, τG, τ²G, ..., τ^(n-1)G].
- *   These are used to compute commitments: commit(p) = Σ(c_i * τ^i * G) where c_i are coefficients.
- *
- * - **G2 points (powers_in_g2)**: For verification, you typically only need 2 G2 points:
- *   [G2, τ·G2]. These are used in pairing operations: e(commitment, G2) = e(proof, τ·G2).
- *   However, some protocols may require more G2 points for advanced verification.
- *
- * Reads all G1 and G2 points as specified by the length fields in the file.
- *
- * @param srsFilePath - Path to SRS file (compressed or uncompressed format)
- * @returns G1 and G2 points as Uint8Array arrays, plus generators (g1 = G1 generator G, g2 = G2 generator G2)
- */
 export function loadSRSFromFile(srsFilePath: string): Safe<{
   g1Points: Uint8Array[]
   g1: Uint8Array
@@ -43,14 +13,12 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
     return safeError(new Error(`SRS file not found: ${srsFilePath}`))
   }
 
-  // Load file
   const srsData = readFileSync(srsFilePath)
   console.debug('[loadSRSFromFile] Loaded SRS file', {
     path: srsFilePath,
     size: srsData.length,
   })
 
-  // Read u64 (little-endian) helper
   const readU64 = (offset: number): number => {
     let value = 0n
     for (let i = 0; i < 8; i++) {
@@ -61,15 +29,10 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
 
   let offset = 0
 
-  // Read G1 length (u64, little-endian)
   const g1Length = readU64(offset)
   offset += 8
   console.debug('[loadSRSFromFile] G1 length', { g1Length })
 
-  // Auto-detect compressed vs uncompressed format.
-  // Compressed: G1=48 bytes, G2=96 bytes.  Uncompressed: G1=96 bytes, G2=192 bytes.
-  // We check which size yields a consistent file layout (remaining bytes must
-  // hold exactly u64 + N*g2Size for some integer N).
   const COMPRESSED_G1 = 48
   const UNCOMPRESSED_G1 = 96
 
@@ -140,7 +103,6 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
     offsetAfterG1: offset,
   })
 
-  // Read G2 length (u64, little-endian)
   if (offset + 8 > srsData.length) {
     return safeError(
       new Error(
@@ -184,7 +146,6 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
     offsetAfterG2: offset,
   })
 
-  // Verify we've read the entire file
   const expectedSize = 8 + g1Length * g1PointSize + 8 + g2Length * g2PointSize
   if (offset !== srsData.length) {
     return safeError(
@@ -202,9 +163,8 @@ export function loadSRSFromFile(srsFilePath: string): Safe<{
     g2PointsRead: g2Points.length,
   })
 
-  // Extract generators (first points: G1 generator and G2 generator)
-  const g1 = g1Points[0]! // G1 generator: G
-  const g2 = g2Points[0]! // G2 generator: G2
+  const g1 = g1Points[0]!
+  const g2 = g2Points[0]!
 
   console.info('[loadSRSFromFile] SRS loaded successfully', {
     g1Points: g1Points.length,

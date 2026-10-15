@@ -1,11 +1,3 @@
-/**
- * JAM Specialized Components Performance Benchmark
- *
- * Measures execution times for key cryptographic and consensus-critical
- * operations used across the JAM protocol. Results feed the performance
- * analysis in docs/RING_VRF_PROVER_VERIFIER_ANALYSIS.md.
- */
-
 import { performance } from 'node:perf_hooks'
 import { BandersnatchCurve, Bandersnatch } from '@pbnjam/bandersnatch'
 import { IETFVRFProver } from '../prover/ietf.ts'
@@ -34,10 +26,6 @@ import { generateDevAccountValidatorKeyPair, blake2bHash } from '../utils/core.t
 import { pointToHashRfc9381 } from '../crypto/rfc9381.ts'
 import type { WorkReport, AuditAnnouncement } from '@pbnjam/types'
 import type { Hex } from 'viem'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function avg(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length
@@ -68,10 +56,6 @@ function bench(label: string, fn: () => void, warmup = 3, rounds = 20): { avg: n
   console.log(`  ${label}: avg ${fmt(result.avg)}, median ${fmt(result.median)}, min ${fmt(result.min)}, max ${fmt(result.max)}`)
   return result
 }
-
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
 
 const [keyErr, aliceKeys] = generateDevAccountValidatorKeyPair(0)
 if (keyErr) throw keyErr
@@ -107,7 +91,6 @@ const mockWorkReport: WorkReport = {
   results: [],
 }
 
-// Pre-generate some signatures for verification benchmarks
 const [, entropyGenResult] = generateEntropyVRFSignature(secretKey, sealOutput)
 const [, audit0GenResult] = generateTranche0AuditSignature(secretKey, blockHeaderVrfOutput)
 const [, auditNGenResult] = generateTrancheNAuditSignature(secretKey, blockHeaderVrfOutput, mockWorkReport, 1n)
@@ -137,16 +120,11 @@ try {
   console.warn('WASM verifier not available, skipping WASM benchmarks')
 }
 
-// ---------------------------------------------------------------------------
-// Benchmarks
-// ---------------------------------------------------------------------------
-
 console.log('='.repeat(72))
 console.log('JAM Specialized Components — Performance Benchmark')
 console.log('='.repeat(72))
 console.log()
 
-// 1. Bandersnatch curve operations
 console.log('--- 1. Bandersnatch Curve Operations ---')
 const randomScalar = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcn
 const arbitraryPoint = BandersnatchCurve.scalarMultiply(BandersnatchCurve.GENERATOR, 42n)
@@ -175,7 +153,6 @@ const bytesToPoint = bench('bytesToPoint', () => {
 })
 console.log()
 
-// 2. IETF VRF operations
 console.log('--- 2. IETF VRF (Pedersen-free Schnorr VRF) ---')
 const inputBytes = new Uint8Array(32).fill(0xab)
 const auxData = new Uint8Array(0)
@@ -195,7 +172,6 @@ if (verifierWasm!) {
 }
 console.log()
 
-// 3. Pedersen VRF operations
 console.log('--- 3. Pedersen VRF ---')
 const pedersenProve = bench('PedersenVRFProver.prove', () => {
   PedersenVRFProver.prove(secretKey, { input: inputBytes, auxData })
@@ -206,7 +182,6 @@ const pedersenVerify = bench('PedersenVRFVerifier.verify', () => {
 })
 console.log()
 
-// 4. Banderout / Gamma hash
 console.log('--- 4. Banderout & Gamma Hash ---')
 const gammaBytes = ietfProofResult.gamma
 const getBanderoutBench = bench('getBanderoutFromGamma', () => {
@@ -220,7 +195,6 @@ const pointToHashBench = bench('pointToHashRfc9381', () => {
 })
 console.log()
 
-// 5. Entropy VRF (Gray Paper Eq. 158)
 console.log('--- 5. Entropy VRF (Gray Paper Eq. 158) ---')
 const entropyGen = bench('generateEntropyVRFSignature', () => {
   generateEntropyVRFSignature(secretKey, sealOutput)
@@ -239,7 +213,6 @@ const banderoutBench = bench('banderout (extract from 96-byte sig)', () => {
 })
 console.log()
 
-// 6. Audit Signatures (Gray Paper Eq. 54-62, 105)
 console.log('--- 6. Audit Signatures ---')
 const auditGen0 = bench('generateTranche0AuditSignature', () => {
   generateTranche0AuditSignature(secretKey, blockHeaderVrfOutput)
@@ -267,7 +240,6 @@ if (verifierWasm!) {
 }
 console.log()
 
-// 7. Announcement Signatures (Ed25519, Gray Paper Eq. 82)
 console.log('--- 7. Announcement Signatures (Ed25519) ---')
 const announceGen = bench('generateAnnouncementSignature', () => {
   generateAnnouncementSignature(
@@ -282,14 +254,12 @@ const announceVerify = bench('verifyAnnouncementSignature', () => {
 })
 console.log()
 
-// 8. Work Report Codec
 console.log('--- 8. Work Report Encoding ---')
 const wrEncode = bench('encodeWorkReport', () => {
   encodeWorkReport(mockWorkReport)
 })
 console.log()
 
-// 9. Blake2b hash
 console.log('--- 9. Blake2b Hash ---')
 const data32 = new Uint8Array(32).fill(0xcc)
 const data1k = new Uint8Array(1024).fill(0xdd)
@@ -305,16 +275,11 @@ const blake10k = bench('blake2bHash (10 KB)', () => {
 })
 console.log()
 
-// 10. Key Derivation
 console.log('--- 10. Key Derivation (JIP-5) ---')
 const keyDerive = bench('generateDevAccountValidatorKeyPair', () => {
   generateDevAccountValidatorKeyPair(42)
 })
 console.log()
-
-// ---------------------------------------------------------------------------
-// Summary Table
-// ---------------------------------------------------------------------------
 
 console.log('='.repeat(72))
 console.log('Summary Table (median values)')

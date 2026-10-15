@@ -1,8 +1,3 @@
-/**
- * Lazy loader for the ring-proof Node-API addon.
- * `createRequire` stays inside these functions so ScriptC can alias this module.
- */
-
 import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -46,23 +41,6 @@ export interface RingProofNativeBinding {
   ) => boolean
 }
 
-export type WasmArkVrfBinding = {
-  verify_ring_proof: (
-    srsBytes: Uint8Array,
-    proofBytes: Uint8Array,
-    ringKeysBytes: Uint8Array,
-    keyCommitmentBytes: Uint8Array,
-    ringSize: number,
-  ) => boolean
-  verify_ietf_vrf: (
-    publicKeyBytes: Uint8Array,
-    inputPointBytes: Uint8Array,
-    outputPointBytes: Uint8Array,
-    proofBytes: Uint8Array,
-    auxData: Uint8Array,
-  ) => boolean
-}
-
 function getRingProofNativeFallbackPaths(): string[] {
   const execDir = dirname(process.execPath)
   const cwd = process.cwd()
@@ -75,7 +53,6 @@ function getRingProofNativeFallbackPaths(): string[] {
 }
 
 let cachedRingProofNative: RingProofNativeBinding | null | undefined
-let cachedWasmArkVrf: WasmArkVrfBinding | null | undefined
 
 export function loadRingProofNative(): RingProofNativeBinding | null {
   if (cachedRingProofNative !== undefined) return cachedRingProofNative
@@ -104,17 +81,4 @@ export function loadRingProofNative(): RingProofNativeBinding | null {
 
 export function loadIetfVrfNative(): RingProofNativeBinding | null {
   return loadRingProofNative()
-}
-
-export function loadWasmArkVrf(): WasmArkVrfBinding | null {
-  if (cachedWasmArkVrf !== undefined) return cachedWasmArkVrf
-  try {
-    const require = createRequire(import.meta.url)
-    cachedWasmArkVrf =
-      require('../../wasm-ark-vrf/ark_vrf_wasm.js') as WasmArkVrfBinding
-    return cachedWasmArkVrf
-  } catch {
-    cachedWasmArkVrf = null
-    return null
-  }
 }

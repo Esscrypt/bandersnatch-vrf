@@ -1,24 +1,5 @@
-/**
- * Gamma (VRF output point) utility functions.
- *
- * Gray Paper bandersnatch.tex: banderout from VRF output point (gamma).
- * RFC-9381 Section 5.4.2.3: point-to-hash for VRF output.
- *
- * @module gamma
- */
-
 import { pointToHashRfc9381 } from '../crypto/rfc9381.ts'
 
-/**
- * Get the commitment (hash) from a gamma point using RFC-9381 point-to-hash
- *
- * This is the standard way to derive a hash commitment from the VRF output point (gamma).
- * The hash is computed deterministically from gamma and can be used as a commitment
- * or identifier for the VRF output.
- *
- * @param gamma - The VRF output point (32 bytes)
- * @returns The hash commitment (64 bytes) derived from gamma
- */
 export function getCommitmentFromGamma(gamma: Uint8Array): Uint8Array {
   if (gamma.length !== 32) {
     throw new Error(`Gamma must be 32 bytes, got ${gamma.length}`)
@@ -27,9 +8,6 @@ export function getCommitmentFromGamma(gamma: Uint8Array): Uint8Array {
   return pointToHashRfc9381(gamma)
 }
 
-/**
- * Get the banderout (first 32 bytes) from gamma
- */
 export function getBanderoutFromGamma(gamma: Uint8Array): Uint8Array {
   const fullHash = getCommitmentFromGamma(gamma)
   return fullHash.slice(0, 32)

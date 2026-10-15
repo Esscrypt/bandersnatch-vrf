@@ -1,8 +1,3 @@
-//! ScriptC-facing C ABI for Bandersnatch VRF verification.
-//!
-//! Bytes in, bytes out via one callback (`ffi_format` 3). Scalar returns are
-//! status codes except [`pbnjam_bvrf_abi_version`], which returns `1`.
-
 #[cfg(panic = "abort")]
 compile_error!(
     "pbnjam-bvrf-ffi requires unwind panics so caught panics become status 5; do not set panic = \"abort\""

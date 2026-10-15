@@ -1,16 +1,3 @@
-/**
- * Ring VRF Verifier (Pure TypeScript)
- *
- * Self-contained verifier for Ring VRF proofs. Loads its own SRS and
- * builds the PIOP/Plonk verification pipeline independently of the prover.
- *
- * Implements Ring VRF verification according to bandersnatch-vrf-spec section 4.3:
- * 1. θ₀ = Pedersen.verify(I, ad, O, π_p) - Verify underlying Pedersen VRF proof
- * 2. (Ȳ, R, O_k, s, s_b) ← π_p - Extract Pedersen proof components
- * 3. θ₁ = Ring.verify(V, π_r, Ȳ) - Verify ring proof using Plonk verifier
- * 4. θ ← θ₀ ∧ θ₁ - Both verifications must pass
- */
-
 import {
   BANDERSNATCH_PARAMS,
   Bandersnatch,
@@ -38,12 +25,6 @@ import { commitPolynomialCoeffs } from '../utils/kzg-manual.ts'
 import { loadSRSFromFile } from '../utils/srs-loader.ts'
 import { PedersenVRFVerifier } from './pedersen.ts'
 
-/**
- * Ring VRF Verifier
- *
- * Loads its own SRS and PIOP parameters. Verifies ring membership
- * proofs using the Plonk verification protocol.
- */
 export class RingVRFVerifier {
   private readonly srsG1Points: Uint8Array[]
   private readonly srsG1: Uint8Array
@@ -52,10 +33,6 @@ export class RingVRFVerifier {
   private readonly piopDomainSize: number
   private readonly piopParams: PiopParams
 
-  /**
-   * @param srsFilePath - Path to SRS file (arkworks format)
-   * @param ringSize    - Ring size (number of validators)
-   */
   constructor(srsFilePath: string, ringSize: number) {
     const [error, result] = loadSRSFromFile(srsFilePath)
     if (error) {
@@ -87,15 +64,6 @@ export class RingVRFVerifier {
     this.piopParams = PiopParams.setup(domain, h, seed, padding)
   }
 
-  /**
-   * Verify Ring VRF proof.
-   *
-   * Steps:
-   * 1. θ₀ = Pedersen.verify(I, ad, O, π_p)
-   * 2. Extract Ȳ (blinded public key) from Pedersen proof
-   * 3. θ₁ = Ring.verify(π_r, ring_keys, Ȳ) via Plonk verifier
-   * 4. θ ← θ₀ ∧ θ₁
-   */
   verify(
     ringKeys: Uint8Array[],
     input: RingVRFInput,
@@ -126,11 +94,6 @@ export class RingVRFVerifier {
     )
   }
 
-  /**
-   * Compute ring commitment from public keys.
-   *
-   * @returns 144 bytes: cx(48) + cy(48) + selector(48)
-   */
   private computeRingCommitment(ringKeys: Uint8Array[]): Uint8Array {
     const keys = parseRingKeysFromArrays(ringKeys)
     const maxRing = maxRingSizeFromPiopDomain(this.piopDomainSize)
@@ -169,14 +132,6 @@ export class RingVRFVerifier {
     return commitment
   }
 
-  /**
-   * Verify a Plonk-based ring proof against ring keys and a key commitment.
-   *
-   * @param proofBytes          Serialised w3f RingProof (592 bytes)
-   * @param ringKeys            Serialised ring public keys (32 bytes each)
-   * @param keyCommitmentBytes  Blinded public key Y_bar (32 bytes, compressed)
-   * @returns true if the proof is valid
-   */
   private verifyRingProof(
     proofBytes: Uint8Array,
     ringKeys: Uint8Array[],

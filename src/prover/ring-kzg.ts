@@ -1,17 +1,3 @@
-/**
- * Ring VRF Prover with KZG Polynomial Commitments (Pure TypeScript)
- *
- * Pure TypeScript implementation of w3f ring proof generation, commitment,
- * and verification. Replaces the Rust native module (rust-ring-proof).
- *
- * Reference: rust-ring-proof/src/lib.rs + submodules/ring-proof
- *
- * Architecture:
- *   prove_ring_proof  → PiopProver.build() → PlonkProver.prove()
- *   compute_ring_commitment → PiopParams.fixedColumns() → KZG commit
- *   verify_ring_vrf   → PlonkVerifier.restoreChallenges() → PlonkVerifier.verify()
- */
-
 import {
   BANDERSNATCH_PARAMS,
   Bandersnatch,
@@ -38,64 +24,33 @@ import {
 import { loadSRSFromFile } from '../utils/srs-loader.ts'
 import { PedersenVRFProver } from './pedersen.ts'
 
-// ---------------------------------------------------------------------------
-// Constants matching Rust lib.rs
-// ---------------------------------------------------------------------------
-
-/** BLS12-381 scalar field modulus bit size; used for domain and max ring size. */
 export const MODULUS_BIT_SIZE = 255
 
 export const KEY_SIZE = 32
 export const COMMITMENT_SIZE = 48
 const EVALUATION_SIZE = 32
 
-/** Transcript label for Fiat-Shamir. Must match Rust SUITE_ID. */
 export const SUITE_ID = 'Bandersnatch_SHA-512_ELL2'
 
-/** Padding point bytes for null/invalid keys (compressed Twisted Edwards). */
 const PADDING_POINT_HEX =
   '0x92ca79e61dd90c1573a8693f199bf6e1e86835cc715cdcf93f5ef222560023aa'
-
-// ---------------------------------------------------------------------------
-// Domain sizing functions (matching Rust lib.rs formulas)
-// ---------------------------------------------------------------------------
 
 function nextPowerOf2(n: number): number {
   return 2 ** Math.ceil(Math.log2(n))
 }
 
-/**
- * PIOP domain size from ring size.
- * Formula: (ring_size + 4 + MODULUS_BIT_SIZE).next_power_of_two()
- */
 export function piopDomainSizeFromRingSize(ringSize: number): number {
   return nextPowerOf2(ringSize + 4 + MODULUS_BIT_SIZE)
 }
 
-/**
- * Max ring size for a given PIOP domain.
- * Formula: piop_domain_size - (4 + MODULUS_BIT_SIZE)
- */
 export function maxRingSizeFromPiopDomain(piopDomainSize: number): number {
   return Math.max(0, piopDomainSize - (4 + MODULUS_BIT_SIZE))
 }
 
-/**
- * PCS domain size from ring size.
- * Formula: 3 * piop_domain_size(ring_size) + 1
- */
 export function pcsDomainSizeFromRingSize(ringSize: number): number {
   return 3 * piopDomainSizeFromRingSize(ringSize) + 1
 }
 
-// ---------------------------------------------------------------------------
-// Key parsing helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Deserialize compressed Bandersnatch keys. Null (all-zero) or invalid keys
- * are replaced with the padding point, matching ark-vrf-wasm behaviour.
- */
 export function parseRingKeys(
   ringKeysBytes: Uint8Array,
 ): Array<{ x: bigint; y: bigint }> {
@@ -147,10 +102,6 @@ function hexToUint8(hex: string): Uint8Array {
   return bytes
 }
 
-// ---------------------------------------------------------------------------
-// Verifier key serialization
-// ---------------------------------------------------------------------------
-
 export function serializeVerifierKey(vk: {
   pcsRawVk: { g1: Uint8Array; g2: Uint8Array; tauInG2: Uint8Array }
   fixedColumnsCommitted: FixedColumnsCommitted
@@ -171,18 +122,6 @@ export function serializeVerifierKey(vk: {
   return buf
 }
 
-// ---------------------------------------------------------------------------
-// Proof (de)serialization – matches w3f RingProof layout
-//
-// Layout (592 bytes for standard ring size):
-//   column_commitments   4 × 48 = 192
-//   columns_at_zeta      7 × 32 = 224
-//   quotient_commitment        48
-//   lin_at_zeta_omega          32
-//   agg_at_zeta_proof          48
-//   lin_at_zeta_omega_proof    48
-// ---------------------------------------------------------------------------
-
 export const N_COMMITMENTS = 4
 export const N_EVALUATIONS = 7
 export const PROOF_SIZE =
@@ -191,7 +130,7 @@ export const PROOF_SIZE =
   COMMITMENT_SIZE +
   EVALUATION_SIZE +
   COMMITMENT_SIZE +
-  COMMITMENT_SIZE // = 592
+  COMMITMENT_SIZE
 
 function serializeProof(
   proof: Proof<RingCommitments, RingEvaluations>,
@@ -293,10 +232,6 @@ export function deserializeProofStruct(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public interfaces
-// ---------------------------------------------------------------------------
-
 export interface RingVRFInput {
   input: Uint8Array
   auxData?: Uint8Array
@@ -316,17 +251,6 @@ export interface RingVRFResult {
   proof: RingVRFProof
 }
 
-// ---------------------------------------------------------------------------
-// RingVRFProver – pure TypeScript implementation
-// ---------------------------------------------------------------------------
-
-/**
- * Ring VRF Prover using KZG polynomial commitments.
- *
- * Pure TypeScript replacement for the Rust native module (rust-ring-proof).
- * Uses the existing Plonk infrastructure (PlonkProver, PiopProver, etc.)
- * to generate w3f-compatible ring proofs.
- */
 export class RingVRFProver {
   private srsG1Points: Uint8Array[]
   private srsG1: Uint8Array
@@ -335,10 +259,6 @@ export class RingVRFProver {
   private piopDomainSize: number
   private piopParams: PiopParams
 
-  /**
-   * @param srsFilePath  Path to SRS file (arkworks compressed format)
-   * @param ringSize     Maximum ring size (number of validators)
-   */
   constructor(srsFilePath: string, ringSize: number) {
     const [error, result] = loadSRSFromFile(srsFilePath)
     if (error) {
@@ -370,17 +290,6 @@ export class RingVRFProver {
     this.piopParams = PiopParams.setup(domain, h, seed, padding)
   }
 
-  // -----------------------------------------------------------------------
-  // Low-level API (matching Rust lib.rs)
-  // -----------------------------------------------------------------------
-
-  /**
-   * Compute ring commitment from public keys.
-   *
-   * Matches Rust: index(&pcs_params, &ring_piop_params, keys).1.commitment()
-   *
-   * @returns 144 bytes: cx(48) + cy(48) + selector(48)
-   */
   computeRingCommitment(ringKeys: Uint8Array[]): Uint8Array {
     const keys = parseRingKeysFromArrays(ringKeys)
     const maxRing = maxRingSizeFromPiopDomain(this.piopDomainSize)
@@ -419,17 +328,6 @@ export class RingVRFProver {
     return result
   }
 
-  /**
-   * Generate ring proof.
-   *
-   * Matches Rust: RingProver::init(prover_key, piop_params, k, transcript)
-   *               .prove(blinding_factor)
-   *
-   * @param ringKeys           Serialised ring public keys (32 bytes each)
-   * @param blindingFactor     Fr scalar (32 bytes, little-endian)
-   * @param proverIndex        0-based index of prover in the ring
-   * @returns Proof bytes (592 bytes)
-   */
   proveRingProof(
     ringKeys: Uint8Array[],
     blindingFactor: Uint8Array,
@@ -485,17 +383,6 @@ export class RingVRFProver {
     return serializeProof(proof)
   }
 
-  /**
-   * Verify ring proof with key commitment.
-   *
-   * Matches Rust: RingVerifier::init(verifier_key, piop_params, transcript)
-   *               .verify(proof, key_commitment)
-   *
-   * @param proofBytes          Serialised w3f RingProof (592 bytes)
-   * @param ringKeys            Serialised ring public keys (32 bytes each)
-   * @param keyCommitmentBytes  Blinded public key Y_bar (32 bytes, compressed)
-   * @returns true if the proof is valid
-   */
   verifyRingProof(
     proofBytes: Uint8Array,
     ringKeys: Uint8Array[],
@@ -547,8 +434,6 @@ export class RingVRFProver {
       nConstraints,
     )
 
-    // Rust: let seed_plus_result = (seed + result).into_affine()
-    // The accumulator starts at seed and ends at seed + Y_bar
     const seedPoint = Bandersnatch.fromAffine({
       x: this.piopParams.seed.x,
       y: this.piopParams.seed.y,
@@ -568,18 +453,6 @@ export class RingVRFProver {
     return plonkVerifier.verify(piopVerifier, proof, challenges)
   }
 
-  // -----------------------------------------------------------------------
-  // High-level VRF API (Pedersen VRF + Ring proof)
-  // -----------------------------------------------------------------------
-
-  /**
-   * Generate Ring VRF proof.
-   *
-   * Steps:
-   *  1. Generate Pedersen VRF proof (TypeScript)
-   *  2. Compute ring commitment
-   *  3. Generate ring proof with blinding factor from Pedersen step
-   */
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
     const pedersenResult = PedersenVRFProver.prove(secretKey, {
       input: input.input,
@@ -604,11 +477,6 @@ export class RingVRFProver {
     }
   }
 
-  /**
-   * Verify Ring VRF proof.
-   *
-   * Uses the Plonk-based verifier for the ring membership proof.
-   */
   verify(
     ringKeys: Uint8Array[],
     result: RingVRFResult,
@@ -620,15 +488,6 @@ export class RingVRFProver {
       keyCommitmentBytes,
     )
   }
-
-  // -----------------------------------------------------------------------
-  // Serialization (bandersnatch-vrf-spec)
-  //
-  // gamma(32) || pedersen_proof(160) || ring_proof(592) = 784 bytes
-  //
-  // ring_commitment (144 bytes) is NOT in the ticket proof – it is part
-  // of the epoch root.
-  // -----------------------------------------------------------------------
 
   static serialize(result: RingVRFResult): Uint8Array {
     const GAMMA_SIZE = 32
@@ -677,10 +536,6 @@ export class RingVRFProver {
       },
     }
   }
-
-  // -----------------------------------------------------------------------
-  // Utilities
-  // -----------------------------------------------------------------------
 
   static calculatePiopDomainSize(ringSize: number): number {
     return piopDomainSizeFromRingSize(ringSize)

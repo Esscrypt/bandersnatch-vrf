@@ -9,7 +9,7 @@ use pbnjam_ring_proof_core::packed::{
 use std::path::PathBuf;
 
 fn packed_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../pvm-rust/core/testdata/packed")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../test-data/packed")
 }
 
 fn read_fixture(name: &str) -> Vec<u8> {

@@ -1,8 +1,3 @@
-/**
- * Differential test: batched ring verification must agree (accept/reject) with per-proof
- * verification. Uses the two distinct valid test-vector proofs that share one ring.
- */
-
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -28,7 +23,6 @@ function flip(b: Uint8Array, i = 10): Uint8Array {
 function load() {
   const srs = readFileSync(SRS_PATH)
   const vectors = JSON.parse(readFileSync(VECTORS_PATH, 'utf-8'))
-  // pick the ring shared by the most vectors
   const counts = new Map<string, number>()
   for (const v of vectors) counts.set(v.ring_pks, (counts.get(v.ring_pks) ?? 0) + 1)
   const topRing = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
@@ -75,8 +69,6 @@ describe('batch ring verification differential', () => {
   it('rejects the batch if any proof is tampered', () => {
     const { vk, ringSize, items } = load()
     const bad = [items[0], { ...items[1], proofBytes: Buffer.from(flip(items[1].proofBytes)) }]
-    // tampering may yield non-deserializable bytes (native throws) or a deserializable-but-invalid
-    // proof (returns false). Both are rejections — map throw->false, as the TS wrapper does.
     let result: boolean
     try {
       result = native.batchVerifyRingVrf(vk, ringSize, bad)
@@ -88,7 +80,6 @@ describe('batch ring verification differential', () => {
 
   it('rejects the batch if a key commitment is swapped', () => {
     const { vk, ringSize, items } = load()
-    // swap commitments between the two proofs -> both openings now bind the wrong key
     const swapped = [
       { proofBytes: items[0].proofBytes, keyCommitmentBytes: items[1].keyCommitmentBytes },
       { proofBytes: items[1].proofBytes, keyCommitmentBytes: items[0].keyCommitmentBytes },

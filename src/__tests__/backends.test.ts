@@ -1,8 +1,3 @@
-/**
- * Seam tests for optional Ring/IETF backends and lazy WASM loading.
- * Production crypto stays in the W3F classes; these tests assert wiring.
- */
-
 import { describe, expect, mock, spyOn, test } from 'bun:test'
 import * as fs from 'node:fs'
 import { join } from 'node:path'
@@ -67,7 +62,7 @@ function makePedersenBundle() {
 }
 
 describe('WASM is not imported at module evaluation', () => {
-  test('missing backend plus missing addon does not import WASM at module evaluation', async () => {
+  test('W3F verifier modules do not load ark_vrf_wasm at import time', async () => {
     const readSpy = spyOn(fs, 'readFileSync')
     try {
       const ringMod = await import('../verifier/ring-w3f.ts')

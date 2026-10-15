@@ -1,12 +1,3 @@
-/**
- * IETF VRF Prover using Rust napi-rs bindings (rust-ring-proof native module).
- *
- * Proof wire format: gamma (32) || c (32) || s (32) = 96 bytes.
- * Matches the format produced by IETFVRFProver and consumed by IETFVRFVerifierWasm.
- *
- * Requires the native module; build with `bun run build:native` in the package.
- */
-
 import type { IETFVRFResult } from './ietf.ts'
 import { getRustProveIetfVrf } from './rust-ietf-vrf-wrapper.ts'
 
@@ -16,21 +7,7 @@ const RUST_REQUIRED_MSG =
 const GAMMA_LEN = 32
 const PROOF_TOTAL_LEN = 96
 
-/**
- * IETF VRF Prover using Rust napi-rs native module.
- *
- * Same API as IETFVRFProver but delegates all crypto to Rust via napi-rs.
- * Hash-to-curve (Elligator2 / RFC-9380) is performed inside Rust.
- */
 export class IETFVRFProverW3F {
-  /**
-   * Generate IETF VRF proof and output using the Rust native module.
-   *
-   * @param secretKey - Secret scalar (32 bytes, little-endian Fr)
-   * @param input - Raw VRF input data (hashed to curve inside Rust via Elligator2)
-   * @param auxData - Additional data bound to the proof (optional)
-   * @returns gamma (32 bytes) and proof (96 bytes: gamma || c || s)
-   */
   static prove(
     secretKey: Uint8Array,
     input: Uint8Array,

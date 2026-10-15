@@ -1,10 +1,3 @@
-/**
- * Plonk Prover
- *
- * Main Plonk prover that wraps PIOP and implements the 3-round Plonk protocol
- * Matches w3f-plonk-common/src/prover.rs
- */
-
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import { BandersnatchCurve } from '@pbnjam/bandersnatch'
 import { curvePointToNoble } from '../crypto/elligator2.ts'
@@ -20,14 +13,6 @@ import type { PiopProver } from './piop/prover.ts'
 import type { Proof } from './proof.ts'
 import type { PlonkTranscript } from './transcript/transcript.ts'
 
-/**
- * Plonk Prover
- *
- * Implements the 3-round Plonk protocol:
- * - Round 1: Commit to witness columns
- * - Round 2: Aggregate constraints, compute quotient polynomial
- * - Round 3: Evaluate at zeta, compute linearization, generate KZG proofs
- */
 export class PlonkProver {
   private readonly pcsCk: {
     srsG1Points: Uint8Array[]
@@ -37,13 +22,6 @@ export class PlonkProver {
   }
   private readonly transcriptPrelude: PlonkTranscript<Uint8Array>
 
-  /**
-   * Initialize Plonk prover
-   *
-   * @param pcsCk - Polynomial commitment scheme committing key (SRS)
-   * @param verifierKey - Verifier key (for transcript)
-   * @param emptyTranscript - Empty transcript instance
-   */
   static init(
     pcsCk: {
       srsG1Points: Uint8Array[]
@@ -55,9 +33,7 @@ export class PlonkProver {
     emptyTranscript: PlonkTranscript<Uint8Array>,
   ): PlonkProver {
     const transcriptPrelude = emptyTranscript
-    // Add verifier key to transcript
-    // transcriptPrelude._add_serializable('vk', verifierKey)
-    void verifierKey // Will be used when transcript is fully implemented
+    void verifierKey
 
     return new PlonkProver(pcsCk, transcriptPrelude)
   }
@@ -75,26 +51,15 @@ export class PlonkProver {
     this.transcriptPrelude = transcriptPrelude
   }
 
-  /**
-   * Generate Plonk proof
-   *
-   * @param piop - PIOP prover instance
-   * @returns Plonk proof
-   */
   prove(piop: PiopProver): Proof<RingCommitments, RingEvaluations> {
-    const transcript = this.transcriptPrelude // Clone in real implementation
+    const transcript = this.transcriptPrelude
 
-    // Add instance (result) to transcript
     const resultPoint = piop.result()
-    // Serialize result point to bytes using BandersnatchCurve.pointToBytes()
-    // This produces 32 bytes (compressed format: y-coordinate + sign bit)
-    // Convert {x, y} to CurvePoint format with isInfinity property
     const curvePoint = { ...resultPoint, isInfinity: false }
     const noblePoint = curvePointToNoble(curvePoint)
     const resultBytes = BandersnatchCurve.pointToBytes(noblePoint)
     transcript.addInstance(resultBytes)
 
-    // ROUND 1: Commit to witness columns
     const columnCommitments = piop.committedColumns((poly) => {
       const [error, commitment] = commitPolynomialCoeffs(
         poly.coeffs,
@@ -109,22 +74,17 @@ export class PlonkProver {
     })
     transcript.addCommittedCols(columnCommitments)
 
-    // ROUND 2: Aggregate constraints and compute quotient polynomial
     const constraintPolys = piop.constraints()
     const nConstraints = constraintPolys.length
     const alphas = transcript.getConstraintsAggregationCoeffs(nConstraints)
 
-    // Aggregate constraint polynomials in evaluation form
     const aggConstraintPoly = this.aggregateEvaluations(constraintPolys, alphas)
 
-    // Interpolate aggregated constraint polynomial
     const aggConstraintPolyDense = aggConstraintPoly.interpolate()
 
-    // Divide by vanishing polynomial to get quotient
     const domain = piop.getDomain()
     const quotientPoly = domain.divideByVanishingPoly(aggConstraintPolyDense)
 
-    // Commit to quotient polynomial
     const [quotientError, quotientCommitment] = commitPolynomialCoeffs(
       quotientPoly.coeffs,
       this.pcsCk.srsG1Points,
@@ -136,16 +96,13 @@ export class PlonkProver {
     }
     transcript.addQuotientCommitment(quotientCommitment)
 
-    // ROUND 3: Evaluate columns at zeta and generate KZG proofs
     const zeta = transcript.getEvaluationPoint()
     const columnsToOpen = piop.columns()
     const columnsAtZeta = piop.columnsEvaluated(zeta)
     const constraintPolysLinearized = piop.constraintsLinearized(zeta)
 
-    // Aggregate linearized constraint polynomials
     const lin = this.aggregatePolynomials(constraintPolysLinearized, alphas)
 
-    // Evaluate linearization at zeta*omega
     const omega = domain.omega()
     const Fr = bls12_381.fields.Fr
     const zetaOmega = Fr.mul(Fr.create(zeta), Fr.create(omega))
@@ -153,15 +110,12 @@ export class PlonkProver {
 
     transcript.addEvaluations(columnsAtZeta, linAtZetaOmega)
 
-    // Aggregate polynomials for batch opening
     const polysAtZeta = [...columnsToOpen, quotientPoly]
     const nPolys = polysAtZeta.length
     const nus = transcript.getKzgAggregationChallenges(nPolys)
 
-    // Aggregate polynomials at zeta
     const aggAtZeta = this.aggregatePolynomials(polysAtZeta, nus)
 
-    // Generate KZG proofs
     const zetaBytes = bigintToBytes32BE(zeta)
     const [aggProofError, aggAtZetaProof] = computeKzgProofFromCoeffs(
       aggAtZeta.coeffs,
@@ -196,12 +150,6 @@ export class PlonkProver {
     }
   }
 
-  /**
-   * Aggregate evaluations with coefficients
-   *
-   * Computes: Σ(alpha_i * evaluations_i)
-   * Matching Rust: aggregate_evaluations() which returns Evaluations<F> with interpolate() method
-   */
   private aggregateEvaluations(
     evaluations: bigint[][],
     coeffs: bigint[],
@@ -216,13 +164,11 @@ export class PlonkProver {
     const n = evaluations[0]?.length ?? 0
 
     if (n === 0) {
-      // Return zero polynomial if no evaluations
       return {
         interpolate: () => new DensePolynomialImpl([Fr.ZERO]),
       }
     }
 
-    // Aggregate: result[i] = Σ(coeffs[j] * evaluations[j][i])
     const aggregated: bigint[] = []
     for (let i = 0; i < n; i++) {
       let sum = Fr.ZERO
@@ -234,14 +180,8 @@ export class PlonkProver {
       aggregated.push(sum)
     }
 
-    // Return object with interpolate method
-    // In Rust, Evaluations<F>.interpolate() uses IFFT to convert from evaluation form to coefficient form
-    // The aggregated evaluations are over the 4x domain, so we need to use IFFT
     return {
       interpolate: () => {
-        // Use IFFT to interpolate from evaluation form to coefficient form
-        // The evaluations are over a domain of size n (4x domain size)
-        // We need to find the domain size and apply IFFT
         const domainSize = n
         const logNValue = Math.log2(domainSize)
 
@@ -251,18 +191,12 @@ export class PlonkProver {
           )
         }
 
-        // Apply IFFT to get polynomial coefficients
         const coeffs = this.ifft(aggregated, domainSize, logNValue)
         return new DensePolynomialImpl(coeffs)
       },
     }
   }
 
-  /**
-   * IFFT on field elements
-   *
-   * Converts from evaluation form to coefficient form
-   */
   private ifft(values: bigint[], domainSize: number, logN: number): bigint[] {
     const Fr = bls12_381.fields.Fr
 
@@ -276,7 +210,6 @@ export class PlonkProver {
 
     const result = values.map((v) => Fr.create(v))
 
-    // Bit-reverse permutation
     for (let i = 0; i < domainSize; i++) {
       const j = this.bitReverse(i, logN)
       if (i < j) {
@@ -286,7 +219,6 @@ export class PlonkProver {
       }
     }
 
-    // Cooley-Tukey IFFT
     let m = 1
     for (let s = 1; s <= logN; s++) {
       const wm = Fr.pow(omegaInv, BigInt(domainSize / (2 * m)))
@@ -305,14 +237,10 @@ export class PlonkProver {
       m *= 2
     }
 
-    // Normalize by dividing by domain size
     const domainSizeInv = Fr.inv(Fr.create(BigInt(domainSize)))
     return result.map((r) => Fr.mul(r, domainSizeInv))
   }
 
-  /**
-   * Bit-reverse an index for FFT/IFFT
-   */
   private bitReverse(index: number, logN: number): number {
     let reversed = 0
     for (let i = 0; i < logN; i++) {
@@ -322,11 +250,6 @@ export class PlonkProver {
     return reversed
   }
 
-  /**
-   * Aggregate polynomials with coefficients
-   *
-   * Computes: Σ(nu_i * poly_i)
-   */
   private aggregatePolynomials(
     polys: DensePolynomial[],
     coeffs: bigint[],
@@ -339,10 +262,8 @@ export class PlonkProver {
 
     const Fr = bls12_381.fields.Fr
 
-    // Find maximum degree
     const maxDegree = Math.max(...polys.map((p) => p.degree))
 
-    // Aggregate coefficients
     const aggregated: bigint[] = []
     for (let i = 0; i <= maxDegree; i++) {
       let sum = Fr.ZERO

@@ -1,10 +1,3 @@
-/**
- * Manual KZG Commitment and Proof Computation
- *
- * Implements blobToKzgCommitment and computeBlobKzgProof manually according to bandersnatch-vrf-spec.
- * Domain size |𝔻| = 2048, so blob has 2048 field elements (not 4096 like c-kzg).
- */
-
 import { bls12_381 } from '@noble/curves/bls12-381.js'
 import {
   BANDERSNATCH_PARAMS,
@@ -18,92 +11,33 @@ import { safeError, safeResult } from '@pbnjam/types'
 import { hexToBytes } from 'viem'
 import { BANDERSNATCH_VRF_CONFIG } from '../config/bandersnatch-vrf-config.ts'
 
-/**
- * Blob size according to bandersnatch-vrf-spec
- * Domain size |𝔻| = 2048, so blob = 2048 * 32 = 65536 bytes
- */
-export const BYTES_PER_BLOB = 2048 * 32 // 65536 bytes
+export const BYTES_PER_BLOB = 2048 * 32
 export const FIELD_ELEMENTS_PER_BLOB = 2048
 
-/**
- * BLS12-381 scalar field order (r)
- * r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
- *
- * This is the order of the scalar field Fr (curve order), NOT the base field Fp.
- * For polynomial evaluation and KZG operations, we work in the scalar field.
- */
 const BLS12_381_SCALAR_FIELD_ORDER = bls12_381.fields.Fr.ORDER
 
-/**
- * Evaluate polynomial at point z
- *
- * This is a SCALAR FIELD operation, not a group operation.
- * We compute: p(z) = Σ(c_i * z^i) where all values are scalars in Fr.
- *
- * This is different from:
- * - Commitment (group operation): C = Σ(c_i * τ^i * G) - uses G1 point operations
- * - Proof (group operation): π = Q(τ) * G - uses G1 point operations
- *
- * For polynomial evaluation:
- * - Input: coefficients c_i (scalars) and point z (scalar)
- * - Output: y = p(z) (scalar)
- * - Operations: scalar field arithmetic (addition and multiplication mod r)
- * - Start value: 0 (additive identity in the scalar field)
- *
- * We do NOT use group operations (G1 point add/mul) here because we're
- * evaluating the polynomial itself, not committing to it.
- *
- * @param polynomial - Array of polynomial coefficients (bigint)
- * @param z - Evaluation point (bigint)
- * @returns Polynomial evaluation result y = p(z) (bigint)
- */
 export function evaluatePolynomialAt(polynomial: bigint[], z: bigint): bigint {
-  // BLS12-381 scalar field order (r) - NOT base field order!
-  // For BLS12-381: scalar field Fr has order r (curve order)
-  // Base field Fp has a different order
   const zReduced = mod(z, BLS12_381_SCALAR_FIELD_ORDER)
 
-  // Start at 0 (additive identity) because we're summing scalars
   let y = 0n
   let zPower = 1n
 
-  // Horner's method: p(z) = c_0 + z*(c_1 + z*(c_2 + ...))
-  // Or equivalently: p(z) = Σ(c_i * z^i)
   for (const coeff of polynomial) {
-    // term = c_i * z^i (scalar field multiplication)
     const term = mod(coeff * zPower, BLS12_381_SCALAR_FIELD_ORDER)
-    // y += term (scalar field addition)
     y = mod(y + term, BLS12_381_SCALAR_FIELD_ORDER)
-    // zPower *= z for next iteration
     zPower = mod(zPower * zReduced, BLS12_381_SCALAR_FIELD_ORDER)
   }
   return y
 }
 
-/**
- * Convert polynomial coefficients to blob format
- *
- * According to bandersnatch-vrf-spec:
- * - Domain size |𝔻| = 2048 (polynomial evaluation domain)
- * - Blob has 2048 BLS12-381 scalar field elements
- * - Each element is 32 bytes in big-endian
- * - Polynomial has at most domain_size - 1 = 2047 coefficients
- *
- * Each coefficient must be reduced modulo the BLS12-381 scalar field order.
- *
- * @param polynomial - Array of polynomial coefficients (bigint)
- * @returns Blob (2048 * 32 = 65536 bytes)
- */
 export function polynomialToBlob(polynomial: bigint[]): Uint8Array {
   const blob = new Uint8Array(BYTES_PER_BLOB)
 
   for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
     const coeff = polynomial[i] ?? 0n
 
-    // Reduce coefficient to BLS12-381 scalar field (NOT Bandersnatch field!)
     const reducedCoeff = mod(coeff, BLS12_381_SCALAR_FIELD_ORDER)
 
-    // Convert bigint to 32-byte big-endian representation
     const coeffBytes = bigintToBytes32BE(reducedCoeff)
     blob.set(coeffBytes, i * 32)
   }
@@ -111,9 +45,6 @@ export function polynomialToBlob(polynomial: bigint[]): Uint8Array {
   return blob
 }
 
-/**
- * Convert 32-byte big-endian bytes to bigint
- */
 function bytes32BEToBigint(bytes: Uint8Array): bigint {
   let value = 0n
   for (let i = 0; i < 32; i++) {
@@ -122,12 +53,6 @@ function bytes32BEToBigint(bytes: Uint8Array): bigint {
   return value
 }
 
-/**
- * Extract polynomial coefficients from blob
- *
- * @param blob - Blob (65536 bytes)
- * @returns Array of polynomial coefficients (bigint)
- */
 export function blobToPolynomial(blob: Uint8Array): bigint[] {
   if (blob.length !== BYTES_PER_BLOB) {
     throw new Error(`Blob must be ${BYTES_PER_BLOB} bytes, got ${blob.length}`)
@@ -144,19 +69,6 @@ export function blobToPolynomial(blob: Uint8Array): bigint[] {
   return polynomial
 }
 
-/**
- * Manual blobToKzgCommitment using MSM
- *
- * Computes: C = Σ(c_i * τ^i * G) where:
- * - c_i are polynomial coefficients from the blob
- * - τ^i * G are the SRS points (monomial basis)
- *
- * This is equivalent to committing to polynomial p(x) = Σ(c_i * x^i)
- *
- * @param blob - Blob representing polynomial coefficients
- * @param srsG1Points - SRS G1 points in monomial basis [G, τG, τ²G, ..., τ^(n-1)G]
- * @returns KZG commitment (48-byte compressed BLS12-381 G1 point)
- */
 export function blobToKzgCommitment(
   blob: Uint8Array,
   srsG1Points: Uint8Array[],
@@ -171,18 +83,6 @@ export function blobToKzgCommitment(
   return commitPolynomialCoeffs(polynomial, srsG1Points)
 }
 
-/**
- * Commit directly to polynomial coefficients using MSM.
- *
- * Unlike blobToKzgCommitment, this accepts variable-length coefficient arrays
- * and does not require the fixed 2048-element blob format.
- *
- * Computes: C = Σ(c_i * τ^i * G)
- *
- * @param coeffs - Polynomial coefficients (bigint[])
- * @param srsG1Points - SRS G1 points [G, τG, τ²G, ..., τ^(n-1)G]
- * @returns KZG commitment (48-byte compressed BLS12-381 G1 point)
- */
 export function commitPolynomialCoeffs(
   coeffs: bigint[],
   srsG1Points: Uint8Array[],
@@ -210,25 +110,6 @@ export function commitPolynomialCoeffs(
   return safeResult(commitment.toBytes(true))
 }
 
-/**
- * Manual computeBlobKzgProof
- *
- * Computes a KZG proof that the polynomial p(x) evaluates to p(z) at point z.
- *
- * The proof is computed as:
- * π = Q(τ) * G where Q(x) = (p(x) - p(z)) / (x - z)
- *
- * Steps:
- * 1. Evaluate polynomial at z: y = p(z)
- * 2. Compute quotient polynomial Q(x) = (p(x) - y) / (x - z)
- * 3. Commit to Q(x) using SRS: π = Σ(q_i * τ^i * G)
- *
- * @param blob - Blob representing polynomial p(x)
- * @param commitmentBytes - KZG commitment to p(x) (for validation)
- * @param zBytes - Evaluation point z (32 bytes, big-endian)
- * @param srsG1Points - SRS G1 points in monomial basis
- * @returns KZG proof (48-byte compressed BLS12-381 G1 point)
- */
 export function computeBlobKzgProof(
   blob: Uint8Array,
   zBytes: Uint8Array,
@@ -244,18 +125,6 @@ export function computeBlobKzgProof(
   return computeKzgProofFromCoeffs(polynomial, zBytes, srsG1Points)
 }
 
-/**
- * Compute KZG proof directly from polynomial coefficients.
- *
- * Computes: π = Q(τ) * G where Q(x) = (p(x) - p(z)) / (x - z)
- *
- * Unlike computeBlobKzgProof, this accepts variable-length coefficient arrays.
- *
- * @param polynomial - Polynomial coefficients (bigint[])
- * @param zBytes - Evaluation point z (32 bytes, big-endian)
- * @param srsG1Points - SRS G1 points in monomial basis
- * @returns KZG proof (48-byte compressed BLS12-381 G1 point)
- */
 export function computeKzgProofFromCoeffs(
   polynomial: bigint[],
   zBytes: Uint8Array,
@@ -299,23 +168,6 @@ export function computeKzgProofFromCoeffs(
   return commitPolynomialCoeffs(quotient, srsG1Points)
 }
 
-/**
- * Verify KZG proof
- *
- * Verifies that commitment C corresponds to polynomial p(x) and p(z) = y.
- *
- * Uses pairing check: e(C - y*G, G2) = e(π, (τ - z)*G2)
- * Which is equivalent to: e(C, G2) = e(π, (τ - z)*G2) * e(y*G, G2)
- *
- * @param commitmentBytes - KZG commitment (48 bytes)
- * @param zBytes - Evaluation point z (32 bytes)
- * @param yBytes - Evaluation result y (32 bytes)
- * @param proofBytes - KZG proof (48 bytes)
- * @param srsG1 - SRS G1 generator G (48 bytes)
- * @param srsG2 - SRS G2 generator G2 (96 bytes)
- * @param srsG2Tau - SRS G2 point τ*G2 (96 bytes)
- * @returns true if proof is valid
- */
 export function verifyKzgProof(
   commitmentBytes: Uint8Array,
   zBytes: Uint8Array,
@@ -337,26 +189,19 @@ export function verifyKzgProof(
     const zReduced = mod(z, BLS12_381_SCALAR_FIELD_ORDER)
     const yReduced = mod(y, BLS12_381_SCALAR_FIELD_ORDER)
 
-    // Compute (τ - z)*G2 = τ*G2 - z*G2
     const g2ZTau = g2Tau.subtract(g2.multiply(zReduced))
 
-    // Compute y*G
     const yG = g1.multiply(yReduced)
 
-    // Compute C - y*G
     const commitmentMinusY = commitment.subtract(yG)
 
-    // Pairing check: e(C - y*G, G2) = e(π, (τ - z)*G2)
-    // This is equivalent to: e(C - y*G, G2) * e(π, (τ - z)*G2)^(-1) = 1
     const left = bls12_381.pairing(commitmentMinusY, g2)
     const right = bls12_381.pairing(proof, g2ZTau)
 
-    // Multiply left by inverse of right, then final exponentiate
     const rightInv = bls12_381.fields.Fp12.inv(right)
     const product = bls12_381.fields.Fp12.mul(left, rightInv)
     const final = bls12_381.fields.Fp12.finalExponentiate(product)
 
-    // Check if result equals Fp12.ONE
     return safeResult(
       bls12_381.fields.Fp12.eql(final, bls12_381.fields.Fp12.ONE),
     )
@@ -369,42 +214,27 @@ export function verifyKzgProof(
   }
 }
 
-/**
- * Extract x and y coordinate vectors from ring keys
- *
- * This is shared logic between createRingPolynomial (x-only) and computeRingCommitment (x and y).
- * Returns both x and y coordinate vectors matching Rust Ring::with_keys() structure:
- * [keys, powers_of_h, idle_rows (4), final_padding (1)]
- *
- * @param ringKeys - Array of Bandersnatch public keys (32 bytes each)
- * @returns Object with xs and ys coordinate vectors
- */
 export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
   xs: bigint[]
   ys: bigint[]
 } {
-  const scalarBitlen = 253 // Bandersnatch scalar field bit length
-  const idleRows = 4 // IDLE_ROWS = ZK_ROWS + 1 = 3 + 1 = 4
+  const scalarBitlen = 253
+  const idleRows = 4
   const fieldModulus = BANDERSNATCH_PARAMS.FIELD_MODULUS
 
-  // Pre-compute padding point once (optimization: avoid repeated conversions)
   const paddingPointBytes = hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
   const paddingPoint = BandersnatchCurve.bytesToPoint(paddingPointBytes)
   const paddingX = BigInt(paddingPoint.x.toString())
   const paddingY = BigInt(paddingPoint.y.toString())
 
-  // Pre-compute negated padding values (used for idle rows)
-  // Note: paddingX and paddingY are already in [0, fieldModulus) range, so no reduction needed
   const negPaddingX = mod(-paddingX, fieldModulus)
   const negPaddingY = mod(-paddingY, fieldModulus)
 
-  // Pre-allocate arrays with known size (optimization: avoid reallocations)
   const vectorLength = ringKeys.length + scalarBitlen + idleRows + 1
   const xs: bigint[] = new Array(vectorLength)
   const ys: bigint[] = new Array(vectorLength)
   let idx = 0
 
-  // Step 1: Keys portion - [(pk1_x - padding_x), (pk1_y - padding_y), ...]
   for (const key of ringKeys) {
     const isNullKey = key.every((byte) => byte === 0)
     const keyToUse = isNullKey ? paddingPointBytes : key
@@ -412,7 +242,6 @@ export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
     const xBigInt = BigInt(point.x.toString())
     const yBigInt = BigInt(point.y.toString())
 
-    // Compute difference and reduce in one step (optimization: combine operations)
     let xDiff = xBigInt - paddingX
     let yDiff = yBigInt - paddingY
     if (xDiff < 0n) xDiff += fieldModulus
@@ -422,8 +251,6 @@ export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
     idx++
   }
 
-  // Step 2: Powers of H - [(H_x - padding_x), (H_y - padding_y), ...]
-  // Pre-compute H point once (optimization: avoid repeated fromAffine calls)
   const accumulatorBase = BANDERSNATCH_PARAMS.ACCUMULATOR_BASE
   let currentH = Bandersnatch.fromAffine({
     x: accumulatorBase.x,
@@ -441,56 +268,23 @@ export function extractRingCoordinateVectors(ringKeys: Uint8Array[]): {
     ys[idx] = mod(yDiff, fieldModulus)
     idx++
 
-    // Double H for next iteration (only if not last)
     if (i < scalarBitlen - 1) {
       currentH = BandersnatchCurve.double(currentH)
     }
   }
 
-  // Step 3: Idle rows - [(-padding_x), (-padding_y)] × 4
-  // Reuse pre-computed negPadding values (optimization: avoid repeated mod calls)
   for (let i = 0; i < idleRows; i++) {
     xs[idx] = negPaddingX
     ys[idx] = negPaddingY
     idx++
   }
 
-  // Step 4: Final padding - [(padding_x), (padding_y)]
-  // Note: paddingX and paddingY are already in [0, fieldModulus) range, so no reduction needed
   xs[idx] = paddingX
   ys[idx] = paddingY
 
   return { xs, ys }
 }
 
-/**
- * Create polynomial from ring of public keys
- * Maps each public key to a coefficient in the polynomial
- *
- * Gray Paper bandersnatch.tex line 20:
- * "Note that in the case a key has no corresponding Bandersnatch point when
- * constructing the ring, then the Bandersnatch padding point as stated by
- * [hosseini2024bandersnatch] should be substituted."
- */
-/**
- * Create ring polynomial matching w3f-ring-proof structure
- *
- * Rust reference: Ring::with_keys() constructs:
- * [(pk1 - padding), ..., (pkn - padding),
- *  (H - padding), ..., (2^(s-1)H - padding),
- *  -padding, -padding, -padding, -padding,
- *  padding]
- *
- * Where:
- * - keys: ringKeys (n keys)
- * - powers of H: H, 2H, 4H, ..., 2^(s-1)H (s = scalar_bitlen = 253)
- * - idle rows: 4 zeros (IDLE_ROWS = 4)
- * - final padding: 1 padding point
- *
- * Total length: keys.len() + (keyset_part_size - keys.len()) + scalar_bitlen + 4 + 1
- * = keyset_part_size + scalar_bitlen + 5
- * = domain_size - 1
- */
 export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
   const maxRingSize = BANDERSNATCH_PARAMS.KZG_CONFIG.MAX_RING_SIZE
 
@@ -500,42 +294,27 @@ export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
     )
   }
 
-  // Domain size and parameters matching Rust PiopParams
   const domainSize = BANDERSNATCH_PARAMS.KZG_CONFIG.DOMAIN_SIZE
-  const scalarBitlen = 253 // Bandersnatch scalar field bit length
-  const keysetPartSize = domainSize - scalarBitlen - 1 // domain.capacity - scalar_bitlen - 1
+  const scalarBitlen = 253
+  const keysetPartSize = domainSize - scalarBitlen - 1
 
-  // Rust points_column: [keys, padding, powers_of_h] with total length = domain.capacity - 1
-  // The actual data is: keys (n) + padding (keysetPartSize - n) + powers_of_h (253) = keysetPartSize + 253 = domainSize - 1
-  // We create a polynomial with domainSize - 1 elements, then pad to domainSize when converting to blob
-  const polynomialLength = domainSize - 1 // domain.capacity - 1 = 2047
+  const polynomialLength = domainSize - 1
   const polynomial: bigint[] = new Array(polynomialLength).fill(0n)
 
-  // Reuse shared coordinate extraction logic (only need x-coordinates for polynomial)
   const { xs } = extractRingCoordinateVectors(ringKeys)
 
-  // Extract x-coordinates for polynomial (excluding idle_rows and final_padding)
-  // Polynomial structure: [keys, padding (zeros), powers_of_h]
-  // Note: extractRingCoordinateVectors includes idle_rows and final_padding, but polynomial doesn't
   const keysCount = ringKeys.length
   const hStartIndex = keysetPartSize
 
-  // Copy keys portion
   for (let i = 0; i < keysCount && i < keysetPartSize; i++) {
     polynomial[i] = xs[i] ?? 0n
   }
 
-  // Padding portion is already zeros (indices keysCount to keysetPartSize - 1)
-
-  // Copy powers of H portion (skip idle_rows and final_padding from xs)
-  // xs structure: [keys, powers_of_h, idle_rows (4), final_padding (1)]
-  // polynomial structure: [keys, padding (zeros), powers_of_h]
   const powersOfHStartInXs = keysCount
   for (let i = 0; i < scalarBitlen; i++) {
     polynomial[hStartIndex + i] = xs[powersOfHStartInXs + i] ?? 0n
   }
 
-  // Verify we filled exactly polynomialLength elements
   const lastDataIndex = keysetPartSize + scalarBitlen - 1
   if (lastDataIndex !== polynomialLength - 1) {
     throw new Error(
@@ -557,9 +336,6 @@ export function createRingPolynomial(ringKeys: Uint8Array[]): bigint[] {
   return polynomial
 }
 
-/**
- * Convert bigint to 32-byte big-endian representation
- */
 export function bigintToBytes32BE(value: bigint): Uint8Array {
   const bytes = new Uint8Array(32)
   let val = value

@@ -1,10 +1,5 @@
-/**
- * Optional Bandersnatch backends shared by the Bun Node-API path and later ScriptC C ABI adapters.
- */
-
 import { blake2b } from '@noble/hashes/blake2.js'
 import { bytesToHex } from 'viem'
-import { loadWasmArkVrf } from './prover/native-loader.ts'
 import { getRustVerifyIetfVrf } from './prover/rust-ietf-vrf-wrapper.ts'
 import {
   getRustBatchVerifyRingVrf,
@@ -160,20 +155,4 @@ export function createNapiIetfBackend(): IetfBackend | null {
       return verify(publicKey, input, proof, auxData)
     },
   }
-}
-
-export function loadWasmVerifyRingProof() {
-  const wasm = loadWasmArkVrf()
-  if (!wasm?.verify_ring_proof) {
-    throw new Error('Ring VRF WASM fallback is unavailable')
-  }
-  return wasm.verify_ring_proof
-}
-
-export function loadWasmVerifyIetfVrf() {
-  const wasm = loadWasmArkVrf()
-  if (!wasm?.verify_ietf_vrf) {
-    throw new Error('IETF VRF WASM fallback is unavailable')
-  }
-  return wasm.verify_ietf_vrf
 }

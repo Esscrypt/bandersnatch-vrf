@@ -1,10 +1,3 @@
-/**
- * Audit Signature Tests
- *
- * Tests the audit signature generation and verification functions
- * Validates compliance with Gray Paper auditing.tex specification
- */
-
 import { describe, expect, it, beforeAll } from 'bun:test'
 import {
   generateTranche0AuditSignature,
@@ -17,7 +10,8 @@ import {
 import { type Hex, generateDevAccountValidatorKeyPair } from '../utils/core.ts'
 import type { WorkReport, AuditAnnouncement, IValidatorSetManager, ValidatorKeyTuple } from '@pbnjam/types'
 import { generateAnnouncementSignature, verifyAnnouncementSignature } from '../utils/announcement.ts'
-import { IETFVRFVerifier, IETFVRFVerifierWasm } from '@pbnjam/bandersnatch-vrf'
+import { IETFVRFVerifier } from '@pbnjam/bandersnatch-vrf'
+import { IETFVRFVerifierWasm } from '../verifier/ietf-wasm.ts'
 
 const verifier: IETFVRFVerifier | IETFVRFVerifierWasm = new IETFVRFVerifierWasm()
 
@@ -25,8 +19,7 @@ describe('Audit Signature Functions', () => {
   const blockHeaderVrfOutput = new Uint8Array(32).fill(3)
   const trancheNumber = 1n
   
-  // Generate Alice's key pair using the keypair service
-  const [aliceKeyPairError, aliceKeyPair] = generateDevAccountValidatorKeyPair(0) // Alice is index 0
+  const [aliceKeyPairError, aliceKeyPair] = generateDevAccountValidatorKeyPair(0)
   if (aliceKeyPairError) {
     throw new Error(`Failed to generate Alice's key pair: ${aliceKeyPairError.message}`)
   }
@@ -47,7 +40,7 @@ describe('Audit Signature Functions', () => {
       lookupAnchorSlot: 1000000n,
       prerequisites: [],
     },
-    coreIndex: 0n,
+    coreIndex: 0,
     authorizer_hash: '0x8888888888888888888888888888888888888888888888888888888888888888',
     authGasUsed: 5000n,
     authOutput: '0x9999999999999999999999999999999999999999999999999999999999999999',
@@ -55,7 +48,6 @@ describe('Audit Signature Functions', () => {
     results: [],
   }
 
-  // Generate Bob's key pair for cross-key tests
   const [bobKeyPairError, bobKeyPair] = generateDevAccountValidatorKeyPair(1)
   if (bobKeyPairError) {
     throw new Error(`Failed to generate Bob's key pair: ${bobKeyPairError.message}`)
@@ -188,7 +180,7 @@ describe('Audit Signature Functions', () => {
         aliceKeyPair.bandersnatchKeyPair.privateKey,
         blockHeaderVrfOutput,
         mockWorkReport,
-        1n,
+        1,
       )
       const [error, isValid] = verifyTrancheNAuditSignature(
         aliceKeyPair.bandersnatchKeyPair.publicKey,
@@ -212,7 +204,7 @@ describe('Audit Signature Functions', () => {
       const [convError, convResult] = generateAuditSignature(
         aliceKeyPair.bandersnatchKeyPair.privateKey,
         blockHeaderVrfOutput,
-        0n,
+        0,
       )
       expect(directError).toBeUndefined()
       expect(convError).toBeUndefined()
@@ -252,13 +244,13 @@ describe('Audit Signature Functions', () => {
       const [, genResult] = generateAuditSignature(
         aliceKeyPair.bandersnatchKeyPair.privateKey,
         blockHeaderVrfOutput,
-        0n,
+        0,
       )
       const [error, isValid] = verifyAuditSignature(
         aliceKeyPair.bandersnatchKeyPair.publicKey,
         genResult!.signature,
         blockHeaderVrfOutput,
-        0n,
+        0,
         verifier,
       )
       expect(error).toBeUndefined()
@@ -299,18 +291,17 @@ describe('Audit Signature Functions', () => {
 
   describe('Round Trip Tests', () => {
     it('should complete round trip for generateAnnouncementSignature and verifyAnnouncementSignature', () => {
-      // Test data
       const testWorkReports = [
         {
-          coreIndex: 0n,
+          coreIndex: 0,
           workReportHash: '0x1111111111111111111111111111111111111111111111111111111111111111' as const,
         },
         {
-          coreIndex: 1n,
+          coreIndex: 1,
           workReportHash: '0x2222222222222222222222222222222222222222222222222222222222222222' as const,
         },
         {
-          coreIndex: 2n,
+          coreIndex: 2,
           workReportHash: '0x3333333333333333333333333333333333333333333333333333333333333333' as const,
         },
       ]
@@ -318,7 +309,6 @@ describe('Audit Signature Functions', () => {
       const testTranche = 2n
       const testHeaderHash = '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
 
-      // Step 1: Generate announcement signature using Alice's Ed25519 private key
       const [genError, signature] = generateAnnouncementSignature(
         aliceKeyPair.ed25519KeyPair.privateKey,
         testWorkReports,
@@ -330,9 +320,8 @@ describe('Audit Signature Functions', () => {
       expect(signature).toBeDefined()
       expect(typeof signature).toBe('string')
       expect(signature!.startsWith('0x')).toBe(true)
-      expect(signature!.length).toBe(130) // 64 bytes * 2 + '0x' prefix
+      expect(signature!.length).toBe(130)
 
-      // Step 2: Create announcement object with the generated signature
       const announcement: AuditAnnouncement = {
         headerHash: testHeaderHash,
         tranche: testTranche,
@@ -343,7 +332,6 @@ describe('Audit Signature Functions', () => {
         evidence: new Uint8Array(96).fill(1),
       }
 
-      // Step 3: Verify the announcement signature
       const [verifyError, isValid] = verifyAnnouncementSignature(
         announcement,
         aliceKeyPair.ed25519KeyPair.publicKey,
@@ -352,12 +340,11 @@ describe('Audit Signature Functions', () => {
       expect(verifyError).toBeUndefined()
       expect(isValid).toBe(true)
 
-      // Step 4: Verify that tampering with the signature makes verification fail
       const tamperedAnnouncement: AuditAnnouncement = {
         ...announcement,
         announcement: {
           ...announcement.announcement,
-          signature: '0x' + 'f'.repeat(128) as Hex, // Tampered signature
+          signature: '0x' + 'f'.repeat(128) as Hex,
         },
       }
 
@@ -369,10 +356,9 @@ describe('Audit Signature Functions', () => {
       expect(tamperError).toBeUndefined()
       expect(tamperValid).toBe(false)
 
-      // Step 5: Verify that tampering with the message makes verification fail
       const tamperedMessageAnnouncement: AuditAnnouncement = {
         ...announcement,
-        tranche: 999n, // Tampered tranche number
+        tranche: 999n,
       }
 
       const [messageError, messageValid] = verifyAnnouncementSignature(
@@ -385,7 +371,6 @@ describe('Audit Signature Functions', () => {
     })
 
     it('should complete round trip for audit signature generation and verification', () => {
-      // Test tranche 0 round trip (uses Alice's Bandersnatch private key)
       const [gen0Error, gen0Result] = generateTranche0AuditSignature(
         aliceKeyPair.bandersnatchKeyPair.privateKey,
         blockHeaderVrfOutput,
@@ -402,7 +387,6 @@ describe('Audit Signature Functions', () => {
       expect(verify0Error).toBeUndefined()
       expect(verify0Valid).toBe(true)
 
-      // Test tranche N round trip (uses Alice's Bandersnatch private key)
       const [genNError, genNResult] = generateTrancheNAuditSignature(
         aliceKeyPair.bandersnatchKeyPair.privateKey,
         blockHeaderVrfOutput,

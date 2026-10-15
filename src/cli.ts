@@ -1,10 +1,3 @@
-/**
- * CLI for Bandersnatch VRF
- *
- * Provides command-line interface for proving and verifying VRF proofs
- * using JSON file inputs
- */
-
 import { readFileSync, writeFileSync } from 'node:fs'
 import { bytesToHex } from 'viem'
 import { IETFVRFProver, type IETFVRFResult } from './prover/ietf.ts'
@@ -17,9 +10,6 @@ import { PedersenVRFVerifier } from './verifier/pedersen.ts'
 import { RingVRFVerifier } from './verifier/ring.ts'
 import { RingVRFVerifierWasm } from './verifier/ring-wasm.ts'
 
-/**
- * Convert hex string to Uint8Array
- */
 function hexToBytes(hex: string | undefined | null): Uint8Array {
   if (!hex) {
     return new Uint8Array(0)
@@ -40,16 +30,10 @@ function hexToBytes(hex: string | undefined | null): Uint8Array {
   return bytes
 }
 
-/**
- * Convert Uint8Array to hex string
- */
 function bytesToHexString(bytes: Uint8Array): string {
   return bytesToHex(bytes)
 }
 
-/**
- * Load JSON from file
- */
 function loadJson<T>(path: string): T {
   try {
     const content = readFileSync(path, 'utf-8')
@@ -59,9 +43,6 @@ function loadJson<T>(path: string): T {
   }
 }
 
-/**
- * Write JSON to file
- */
 function writeJson(path: string, data: unknown): void {
   try {
     writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8')
@@ -70,125 +51,88 @@ function writeJson(path: string, data: unknown): void {
   }
 }
 
-/**
- * IETF VRF Prove Input
- * Supports both formats:
- * - CLI format: { secretKey, input, auxData? }
- * - Test vector format: { sk, alpha, ad? }
- */
 interface IETFProveInput {
-  secretKey?: string // hex string (CLI format)
-  input?: string // hex string (CLI format)
-  auxData?: string // hex string (optional, CLI format)
-  sk?: string // hex string (test vector format)
-  alpha?: string // hex string (test vector format)
-  ad?: string // hex string (optional, test vector format)
+  secretKey?: string
+  input?: string
+  auxData?: string
+  sk?: string
+  alpha?: string
+  ad?: string
 }
 
-/**
- * IETF VRF Prove Output
- */
 interface IETFProveOutput {
-  gamma: string // hex string
-  proof: string // hex string
+  gamma: string
+  proof: string
 }
 
-/**
- * IETF VRF Verify Input
- * Supports both formats:
- * - CLI format: { publicKey, input, proof, auxData? }
- * - Test vector format: { pk, alpha, gamma, proof_c, proof_s, ad? }
- */
 interface IETFVerifyInput {
-  publicKey?: string // hex string (CLI format)
-  input?: string // hex string (CLI format)
-  proof?: string // hex string (CLI format - 96 bytes: gamma + c + s)
-  auxData?: string // hex string (optional, CLI format)
-  pk?: string // hex string (test vector format)
-  alpha?: string // hex string (test vector format)
-  gamma?: string // hex string (test vector format - 32 bytes)
-  proof_c?: string // hex string (test vector format - 32 bytes)
-  proof_s?: string // hex string (test vector format - 32 bytes)
-  ad?: string // hex string (optional, test vector format)
+  publicKey?: string
+  input?: string
+  proof?: string
+  auxData?: string
+  pk?: string
+  alpha?: string
+  gamma?: string
+  proof_c?: string
+  proof_s?: string
+  ad?: string
 }
 
-/**
- * Pedersen VRF Prove Input
- */
 interface PedersenProveInput {
-  secretKey: string // hex string
-  input: string // hex string
-  auxData?: string // hex string (optional)
+  secretKey: string
+  input: string
+  auxData?: string
 }
 
-/**
- * Pedersen VRF Prove Output
- */
 interface PedersenProveOutput {
-  gamma: string // hex string
-  proof: string // hex string
+  gamma: string
+  proof: string
 }
 
-/**
- * Pedersen VRF Verify Input
- */
 interface PedersenVerifyInput {
-  input: string // hex string
-  gamma: string // hex string
-  proof: string // hex string
-  auxData?: string // hex string (optional)
+  input: string
+  gamma: string
+  proof: string
+  auxData?: string
 }
 
-/**
- * Ring VRF Prove Input
- */
 interface RingProveInput {
-  secretKey: string // hex string
-  input: string // hex string
-  auxData?: string // hex string (optional)
-  ringKeys: string[] // array of hex strings
+  secretKey: string
+  input: string
+  auxData?: string
+  ringKeys: string[]
   proverIndex: number
   srsFilePath: string
-  useWasm?: boolean // default: false
+  useWasm?: boolean
 }
 
-/**
- * Ring VRF Prove Output
- */
 interface RingProveOutput {
-  gamma: string // hex string
-  hash: string // hex string
+  gamma: string
+  hash: string
   proof: {
-    pedersenProof: string // hex string
-    ringCommitment: string // hex string
-    ringProof: string // hex string
+    pedersenProof: string
+    ringCommitment: string
+    ringProof: string
     proverIndex?: number
   }
-  serialized: string // hex string
+  serialized: string
 }
 
-/**
- * Ring VRF Verify Input
- */
 interface RingVerifyInput {
-  ringKeys: string[] // array of hex strings
-  input: string // hex string
-  serializedResult: string // hex string
-  auxData?: string // hex string (optional)
+  ringKeys: string[]
+  input: string
+  serializedResult: string
+  auxData?: string
   srsFilePath: string
-  useWasm?: boolean // default: false
+  useWasm?: boolean
 }
 
-/**
- * Prove IETF VRF
- */
 export async function proveIETF(
   inputPath: string,
   outputPath?: string,
 ): Promise<void> {
   const input = loadJson<IETFProveInput>(inputPath)
 
-  // Support both CLI format and test vector format
   const secretKeyHex = input.secretKey ?? input.sk
   const inputHex = input.input ?? input.alpha ?? ''
   const auxDataHex = input.auxData ?? input.ad
@@ -220,16 +164,12 @@ export async function proveIETF(
   }
 }
 
-/**
- * Verify IETF VRF
- */
 export async function verifyIETF(
   inputPath: string,
   verifier: IETFVRFVerifier | IETFVRFVerifierWasm,
 ): Promise<void> {
   const input = loadJson<IETFVerifyInput>(inputPath)
 
-  // Support both CLI format and test vector format
   const publicKeyHex = input.publicKey ?? input.pk
   const inputHex = input.input ?? input.alpha ?? ''
   const auxDataHex = input.auxData ?? input.ad
@@ -238,13 +178,10 @@ export async function verifyIETF(
     throw new Error('Missing publicKey or pk field in input JSON')
   }
 
-  // Handle proof: either direct proof (CLI format) or construct from test vector format
   let proof: Uint8Array
   if (input.proof) {
-    // CLI format: proof is already combined (96 bytes: gamma + c + s)
     proof = hexToBytes(input.proof)
   } else if (input.gamma && input.proof_c && input.proof_s) {
-    // Test vector format: combine gamma (32) + proof_c (32) + proof_s (32) = 96 bytes
     const gammaBytes = hexToBytes(input.gamma)
     const cBytes = hexToBytes(input.proof_c)
     const sBytes = hexToBytes(input.proof_s)
@@ -276,9 +213,6 @@ export async function verifyIETF(
   }
 }
 
-/**
- * Prove Pedersen VRF
- */
 export async function provePedersen(
   inputPath: string,
   outputPath?: string,
@@ -306,9 +240,6 @@ export async function provePedersen(
   }
 }
 
-/**
- * Verify Pedersen VRF
- */
 export async function verifyPedersen(inputPath: string): Promise<void> {
   const input = loadJson<PedersenVerifyInput>(inputPath)
 
@@ -331,9 +262,6 @@ export async function verifyPedersen(inputPath: string): Promise<void> {
   }
 }
 
-/**
- * Prove Ring VRF
- */
 export async function proveRing(
   inputPath: string,
   outputPath?: string,
@@ -362,12 +290,11 @@ export async function proveRing(
     result = prover.prove(secretKey, ringInput)
   }
 
-  // Use RingVRFProver.serialize for both (it's a static method)
   const serialized = RingVRFProver.serialize(result)
 
   const output: RingProveOutput = {
     gamma: bytesToHexString(result.gamma),
-    hash: '', // RingVRFResult doesn't have hash property
+    hash: '',
     proof: {
       pedersenProof: bytesToHexString(result.proof.pedersenProof),
       ringCommitment: bytesToHexString(result.proof.ringCommitment),
@@ -385,9 +312,6 @@ export async function proveRing(
   }
 }
 
-/**
- * Verify Ring VRF
- */
 export async function verifyRing(inputPath: string): Promise<void> {
   const input = loadJson<RingVerifyInput>(inputPath)
 
@@ -396,11 +320,10 @@ export async function verifyRing(inputPath: string): Promise<void> {
     input: hexToBytes(input.input),
     auxData: input.auxData ? hexToBytes(input.auxData) : undefined,
     ringKeys,
-    proverIndex: 0, // Not used in verification
+    proverIndex: 0,
   }
   const serializedResult = hexToBytes(input.serializedResult)
 
-  // Deserialize the result first
   const deserializedResult = RingVRFProver.deserialize(serializedResult)
 
   const useWasm = input.useWasm ?? false
@@ -437,9 +360,6 @@ export async function verifyRing(inputPath: string): Promise<void> {
   }
 }
 
-/**
- * Main CLI entry point
- */
 export async function runCLI(): Promise<void> {
   const args = process.argv.slice(2)
 
@@ -495,7 +415,6 @@ Options:
     process.exit(1)
   }
 
-  // Parse options
   let inputPath: string | undefined
   let outputPath: string | undefined
 
@@ -553,7 +472,6 @@ Options:
   }
 }
 
-// Run CLI if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   runCLI().catch((error) => {
     console.error('Unhandled error:', error)

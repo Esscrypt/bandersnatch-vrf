@@ -1,9 +1,3 @@
-/**
- * IETF VRF Prover Implementation
- *
- * Implements RFC-9381 VRF proof generation
- */
-
 import {
   BandersnatchCurve,
   mod,
@@ -19,51 +13,29 @@ import {
 import { generateNonceRfc8032 } from '../crypto/nonce-rfc8032.ts'
 import { generateChallengeRfc9381 } from '../crypto/rfc9381.ts'
 
-/**
- * IETF VRF result
- */
 export interface IETFVRFResult {
-  /** VRF output gamma point */
   gamma: Uint8Array
-  /** Serialized proof */
   proof: Uint8Array
 }
 
-/**
- * IETF VRF Prover
- * Implements RFC-9381 VRF proof generation
- */
 export class IETFVRFProver {
-  /**
-   * Check if bytes are all zero, and if so, return padding point bytes
-   * Gray Paper bandersnatch.tex line 20: padding point should be substituted for invalid keys
-   */
   private static usePaddingPointIfZero(bytes: Uint8Array): Uint8Array {
-    // Check if all bytes are zero
     const isAllZero = bytes.every((byte) => byte === 0)
     if (isAllZero) {
-      // Return padding point bytes instead
       return hexToBytes(BANDERSNATCH_VRF_CONFIG.PADDING_POINT)
     }
     return bytes
   }
-  /**
-   * Generate VRF proof and output
-   */
   static prove(
     secretKey: Uint8Array,
     input: Uint8Array,
     auxData?: Uint8Array,
   ): IETFVRFResult {
     try {
-      // 1. Hash input to curve point (H1)
-      // Empty salt per test vectors: h2c_data = salt || alpha === alpha
       const alpha = this.hashToCurve(input)
 
-      // 2. Scalar multiplication: gamma = alpha * secretKey
       const gamma = this.scalarMultiply(alpha, secretKey)
 
-      // 3. Generate proof
       const proof = this.generateProof(secretKey, alpha, gamma, auxData)
 
       return {
@@ -80,24 +52,15 @@ export class IETFVRFProver {
     }
   }
 
-  /**
-   * Hash input to curve point (H1 function)
-   */
   static hashToCurve(message: Uint8Array): Uint8Array {
-    // Use Elligator2 for hash-to-curve as specified in the Bandersnatch VRF spec
     const point = elligator2HashToCurve(message)
-    // Convert CurvePoint to bytes using the compression function from elligator2
     return BandersnatchCurve.pointToBytes(curvePointToNoble(point))
   }
 
-  /**
-   * Scalar multiplication on Bandersnatch curve
-   */
   private static scalarMultiply(
     pointUint8Array: Uint8Array,
     scalarUint8Array: Uint8Array,
   ): Uint8Array {
-    // Check for all-zero bytes and use padding point if needed
     const pointBytes = this.usePaddingPointIfZero(pointUint8Array)
     const point = BandersnatchCurve.bytesToPoint(pointBytes)
     const scalar = mod(
@@ -105,78 +68,54 @@ export class IETFVRFProver {
       BandersnatchCurve.CURVE_ORDER,
     )
     const result = BandersnatchCurve.scalarMultiply(point, scalar)
-    // Use our arkworks-compatible compression instead of Noble's native compression
     return BandersnatchCurve.pointToBytes(result)
   }
 
-  /**
-   * Generate VRF proof using RFC-9381 compliant procedures
-   */
   private static generateProof(
     secretKey: Uint8Array,
     alpha: Uint8Array,
     gamma: Uint8Array,
     auxData?: Uint8Array,
   ): Uint8Array {
-    // IETF VRF proof generation (RFC-9381)
-    // Proof = (c, s) where:
-    // c ← challenge(Y, I, O, k · G, k · I, ad)  (per spec section 2.2 step 4)
-    // s = k + c * x (mod q)
 
-    // Convert alpha and gamma to curve points
-    // Check for all-zero bytes and use padding point if needed
     const alphaBytesChecked = this.usePaddingPointIfZero(alpha)
     const gammaBytesChecked = this.usePaddingPointIfZero(gamma)
     const alphaPoint = BandersnatchCurve.bytesToPoint(alphaBytesChecked)
     const gammaPoint = BandersnatchCurve.bytesToPoint(gammaBytesChecked)
 
-    // Generate nonce k using RFC-8032
     const kBytes = generateNonceRfc8032(secretKey, alpha)
     const k = bytesToBigIntLittleEndian(kBytes)
 
-    // Calculate k · G (where G is the generator)
     const gToS = BandersnatchCurve.scalarMultiply(
       BandersnatchCurve.GENERATOR,
       k,
     )
 
-    // Calculate k · I (where I is alpha, the input point)
     const hToC = BandersnatchCurve.scalarMultiply(alphaPoint, k)
 
-    // Calculate challenge c according to bandersnatch-vrf-spec section 2.2 Prove step 4:
-    // c ← challenge(Y, I, O, k · G, k · I, ad)
-    // where Y = publicKey, I = alpha, O = gamma, k·G = gToS, k·I = hToC
     const publicKeyPoint = BandersnatchCurve.scalarMultiply(
       BandersnatchCurve.GENERATOR,
       mod(bytesToBigIntLittleEndian(secretKey), BandersnatchCurve.CURVE_ORDER),
     )
     const challengePoints = [
-      BandersnatchCurve.pointToBytes(publicKeyPoint), // Y
-      BandersnatchCurve.pointToBytes(alphaPoint), // I
-      BandersnatchCurve.pointToBytes(gammaPoint), // O
-      BandersnatchCurve.pointToBytes(gToS), // k · G
-      BandersnatchCurve.pointToBytes(hToC), // k · I
+      BandersnatchCurve.pointToBytes(publicKeyPoint),
+      BandersnatchCurve.pointToBytes(alphaPoint),
+      BandersnatchCurve.pointToBytes(gammaPoint),
+      BandersnatchCurve.pointToBytes(gToS),
+      BandersnatchCurve.pointToBytes(hToC),
     ]
 
-    // Rust reference: challenge_rfc_9381 uses from_be_bytes_mod_order (line 160 in common.rs)
-    // So challenge computation always uses big-endian
     const c = generateChallengeRfc9381(challengePoints, auxData)
 
-    // Calculate s = k + c * x (mod q)
     const x = mod(
       bytesToBigIntLittleEndian(secretKey),
       BandersnatchCurve.CURVE_ORDER,
     )
     const s = mod(k + c * x, BandersnatchCurve.CURVE_ORDER)
 
-    // Serialize proof as (gamma, c, s) - each field element must be exactly 32 bytes
-    // Gray Paper: bssignature{k}{c}{m} ⊂ blob[96] = 32 + 32 + 32 bytes
-    // gamma is already 32 bytes (compressed point from pointToBytes)
-    const gammaBytes = gamma // VRF output point (32 bytes)
-    // Use little-endian encoding per bandersnatch-vrf-spec section 2.1:
-    // "The int_to_string function encodes into the 32 octets little endian representation"
-    const cBytes = numberToBytesLittleEndian(c) // Challenge scalar (32 bytes)
-    const sBytes = numberToBytesLittleEndian(s) // Response scalar (32 bytes)
+    const gammaBytes = gamma
+    const cBytes = numberToBytesLittleEndian(c)
+    const sBytes = numberToBytesLittleEndian(s)
 
     const proofUint8Array = new Uint8Array(96)
     proofUint8Array.set(gammaBytes, 0)

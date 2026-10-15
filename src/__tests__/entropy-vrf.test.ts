@@ -158,8 +158,6 @@ describe('entropy-vrf', () => {
       const sealOutput = new Uint8Array(32).fill(0x55)
       const [, genResult] = generateEntropyVRFSignature(secretKey, sealOutput)
 
-      // Build a 96-byte "seal signature" from gamma (32) + proof (64-byte challenge+scalar)
-      // The banderout function expects gamma in the first 32 bytes
       const gamma = genResult!.signature.slice(0, 32)
       const fullSig = new Uint8Array(96)
       fullSig.set(gamma, 0)

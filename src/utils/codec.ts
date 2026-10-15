@@ -1,14 +1,3 @@
-/**
- * Local implementation of encodeWorkReport for audit-signature.
- *
- * Gray Paper Section: Appendix D.1 - Block Serialization (Equation 231-240).
- * Encoders: encodeNatural (Eq. 30-38), encodeFixedLength (Eq. 102-109),
- * encodeWorkPackageSpec (Eq. 208-214), encodeRefineContext (Eq. 199-206),
- * encodeRefineLoad, encodeWorkExecutionResult, encodeWorkResult (Eq. 216-229).
- *
- * @module codec
- */
-
 import type {
   FixedLengthSize,
   RefineContext,
@@ -23,7 +12,6 @@ import type {
 import { safeError, safeResult } from '@pbnjam/types'
 import { concatBytes, hexToBytes } from './core.ts'
 
-/** @internal Gray Paper Equation 30-38: encode natural number. */
 function encodeNatural(value: number): Safe<Uint8Array>
 function encodeNatural(value: bigint): Safe<Uint8Array>
 function encodeNatural(value: bigint | number): Safe<Uint8Array> {
@@ -61,7 +49,6 @@ function encodeNatural(value: bigint | number): Safe<Uint8Array> {
   return safeResult(result)
 }
 
-/** @internal Gray Paper Equation 102-109: fixed-length encoding. */
 function encodeFixedLength(value: number, length: 1 | 2 | 4): Safe<Uint8Array>
 function encodeFixedLength(value: bigint, length: 8 | 16 | 32): Safe<Uint8Array>
 function encodeFixedLength(
@@ -91,7 +78,6 @@ function encodeFixedLength(
   return safeResult(result)
 }
 
-/** @internal Gray Paper Equation 208-214: work package spec encoding. */
 function encodeWorkPackageSpec(spec: WorkPackageSpec): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   parts.push(hexToBytes(spec.hash))
@@ -106,7 +92,6 @@ function encodeWorkPackageSpec(spec: WorkPackageSpec): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-/** @internal Gray Paper Equation 199-206: refine context encoding. */
 function encodeRefineContext(context: RefineContext): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   parts.push(hexToBytes(context.anchor))
@@ -124,7 +109,6 @@ function encodeRefineContext(context: RefineContext): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-/** @internal Encode refine load (gas_used, imports, extrinsic_count, extrinsic_size, exports). */
 function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   const [e1, g] = encodeNatural(load.gas_used)
@@ -145,8 +129,6 @@ function encodeRefineLoad(load: RefineLoad): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-// Work-error discriminators (0 is reserved for a successful output blob). Mirrors the canonical
-// encoder in @pbnjam/codec; kept local to avoid a cross-package dependency.
 const WORK_ERROR_DISCRIMINATOR: Record<WorkError, number> = {
   OOG: 1,
   PANIC: 2,
@@ -156,7 +138,6 @@ const WORK_ERROR_DISCRIMINATOR: Record<WorkError, number> = {
   BIG: 6,
 }
 
-/** @internal Encode a work execution result: a success output blob, or a work error. */
 function encodeWorkExecutionResult(
   result: WorkExecutionResult,
 ): Safe<Uint8Array> {
@@ -168,7 +149,6 @@ function encodeWorkExecutionResult(
   return safeResult(new Uint8Array([WORK_ERROR_DISCRIMINATOR[result]]))
 }
 
-/** @internal Gray Paper Equation 216-229: work result encoding. */
 function encodeWorkResult(result: WorkResult): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   const [e1, sid] = encodeFixedLength(result.service_id, 4)
@@ -188,13 +168,6 @@ function encodeWorkResult(result: WorkResult): Safe<Uint8Array> {
   return safeResult(concatBytes(parts))
 }
 
-/**
- * Encode work report according to Gray Paper specification (Equation 231-240).
- * encode(WR) = encode(WR_avspec, WR_context, WR_core, WR_authorizer, WR_authgasused, var{authtrace}, var{srlookup}, var{digests})
- *
- * @param report - Work report to encode (packageSpec, context, coreIndex, authorizer_hash, authGasUsed, authOutput, segmentRootLookup, results)
- * @returns Safe result with serialized work report bytes
- */
 export function encodeWorkReport(report: WorkReport): Safe<Uint8Array> {
   const parts: Uint8Array[] = []
   const [error0, encoded0] = encodeWorkPackageSpec(report.packageSpec)

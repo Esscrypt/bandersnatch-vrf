@@ -1,10 +1,3 @@
-/**
- * PIOP Prover
- *
- * Implements the prover side of Polynomial Interactive Oracle Proofs (PIOP)
- * Matches w3f-ring-proof/src/piop/prover.rs
- */
-
 import type { Domain, FieldColumn } from '../domain/domain.ts'
 import type { DensePolynomial } from '../domain/polynomial.ts'
 import { DensePolynomialImpl } from '../domain/polynomial.ts'
@@ -17,11 +10,6 @@ import { InnerProd } from '../gadgets/inner-prod.ts'
 import { RingCommitments, RingEvaluations } from './mod.ts'
 import type { FixedColumns, PiopParams } from './params.ts'
 
-/**
- * PIOP Prover
- *
- * Builds the execution trace and constraints for ring proof
- */
 export class PiopProver {
   private readonly domain: Domain
   private readonly points: AffineColumn
@@ -34,14 +22,6 @@ export class PiopProver {
   private readonly condAddAccX: FixedCells
   private readonly condAddAccY: FixedCells
 
-  /**
-   * Build PIOP prover
-   *
-   * @param params - PIOP parameters
-   * @param fixedColumns - Fixed columns (points and ring selector)
-   * @param proverIndexInKeys - Prover's index in the ring
-   * @param secret - Prover's secret scalar (blinding factor)
-   */
   static build(
     params: PiopParams,
     fixedColumns: FixedColumns,
@@ -51,10 +31,8 @@ export class PiopProver {
     const domain = params.domain
     const { points, ringSelector } = fixedColumns
 
-    // Build bits column
     const bits = PiopProver.bitsColumn(params, proverIndexInKeys, secret)
 
-    // Initialize gadgets
     const innerProd = InnerProd.init(ringSelector, bits.col, domain)
     const condAdd = CondAdd.init(bits, points, params.seed, domain)
     const booleanity = Booleanity.init(bits)
@@ -100,19 +78,11 @@ export class PiopProver {
     this.condAddAccY = condAddAccY
   }
 
-  /**
-   * Build bits column
-   *
-   * Structure: [keyset_part (one hot), scalar_part (secret bits)]
-   * - keyset_part: all false except at prover_index
-   * - scalar_part: bits of secret scalar
-   */
   private static bitsColumn(
     params: PiopParams,
     indexInKeys: number,
     secret: bigint,
   ): BitColumn {
-    // Keyset part: one-hot encoding of prover index
     const keysetPart = Array(params.keysetPartSize).fill(false)
     if (indexInKeys >= keysetPart.length) {
       throw new Error(
@@ -121,10 +91,8 @@ export class PiopProver {
     }
     keysetPart[indexInKeys] = true
 
-    // Scalar part: bits of secret
     const scalarPart = params.scalarPart(secret)
 
-    // Combine
     const bits = [...keysetPart, ...scalarPart]
 
     if (bits.length !== params.domain.capacity - 1) {
@@ -136,9 +104,6 @@ export class PiopProver {
     return BitColumn.init(bits, params.domain)
   }
 
-  /**
-   * Get committed columns (witness columns)
-   */
   committedColumns(
     commit: (poly: DensePolynomial) => Uint8Array,
   ): RingCommitments {
@@ -152,9 +117,6 @@ export class PiopProver {
     return new RingCommitments(bits, innProdAcc, condAddAcc)
   }
 
-  /**
-   * Get all columns as polynomials
-   */
   columns(): DensePolynomial[] {
     return [
       this.points.xs.poly,
@@ -167,9 +129,6 @@ export class PiopProver {
     ]
   }
 
-  /**
-   * Evaluate all columns at point zeta
-   */
   columnsEvaluated(zeta: bigint): RingEvaluations {
     const points: [bigint, bigint] = [
       this.points.xs.evaluate(zeta),
@@ -192,12 +151,7 @@ export class PiopProver {
     )
   }
 
-  /**
-   * Get all constraints
-   */
   constraints(): bigint[][] {
-    // Combine constraints from all gadgets
-    // This will be fully implemented when we have constraint evaluation
     return [
       ...this.innerProd.constraints(),
       ...this.condAdd.constraints(),
@@ -208,9 +162,6 @@ export class PiopProver {
     ]
   }
 
-  /**
-   * Get linearized constraints at point zeta
-   */
   constraintsLinearized(zeta: bigint): DensePolynomial[] {
     const result: DensePolynomial[] = []
 
@@ -219,20 +170,16 @@ export class PiopProver {
       result.push(poly)
     }
 
-    // CondAdd returns DensePolynomial[] directly (special case)
-    // Matching Rust: constraints_linearized() returns Vec<DensePolynomial<F>>
     const condAddPolys = this.condAdd.constraintsLinearizedPolynomials(zeta)
     for (const poly of condAddPolys) {
       result.push(poly)
     }
 
-    // Booleanity returns array of bigint (coefficients)
     const booleanityCoeffs = this.booleanity.constraintsLinearized(zeta)
     for (const coeff of booleanityCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
     }
 
-    // FixedCells return arrays of bigint (coefficients)
     const condAddAccXCoeffs = this.condAddAccX.constraintsLinearized(zeta)
     for (const coeff of condAddAccXCoeffs) {
       result.push(new DensePolynomialImpl([coeff]))
@@ -251,17 +198,10 @@ export class PiopProver {
     return result
   }
 
-  /**
-   * Get domain
-   */
   getDomain(): Domain {
     return this.domain
   }
 
-  /**
-   * Get result (cond_add.result)
-   * This is the blinded public key commitment: seed + sum(selected_points) - seed
-   */
   result(): { x: bigint; y: bigint } {
     return this.condAdd.result
   }

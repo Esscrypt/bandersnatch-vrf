@@ -10,111 +10,73 @@ import {
 
 const XANNOUNCE = new TextEncoder().encode('jam_announce')
 
-/**
- * Audit announcement signature generation and verification (Gray Paper Eq. 82).
- *
- * @module announcement
- */
+const CORE_INDEX_OCTETS = 2
+const SET_ELEMENT_OCTETS = CORE_INDEX_OCTETS + 32
 
-/**
- * Verify audit announcement signature according to Gray Paper Eq. 82
- *
- * Gray Paper Eq. 82:
- * S ≡ edsignature{activeset[v]_vk_ed}{Xannounce ∥ n ∥ x_n ∥ blake{H}}
- * where Xannounce = token("jam_announce")
- *
- * This verifies that:
- * 1. The Ed25519 signature is valid for the announcement message
- * 2. The validator's public key matches the signature
- * 3. The message construction follows Gray Paper specification
- *
- * @param announcement - Audit announcement to verify
- * @param validatorPublicKey - Validator's public key
- * @returns Safe<boolean> - Success if signature is valid
- */
+function compareBytes(a: Uint8Array, b: Uint8Array): number {
+  for (let i = 0; i < a.length && i < b.length; i++) {
+    if (a[i] !== b[i]) {
+      return a[i] - b[i]
+    }
+  }
+  return a.length - b.length
+}
+
+function buildAnnouncementMessage(
+  workReports: Array<{ coreIndex: number; workReportHash: Hex }>,
+  tranche: number,
+  headerHash: Hex,
+): Uint8Array {
+  const elements = workReports.map(({ coreIndex, workReportHash }) => {
+    const element = new Uint8Array(SET_ELEMENT_OCTETS)
+    new DataView(element.buffer).setUint16(0, Number(coreIndex), true)
+    element.set(hexToBytes(workReportHash), CORE_INDEX_OCTETS)
+    return element
+  })
+  elements.sort(compareBytes)
+
+  const headerHashBytes = hexToBytes(headerHash)
+  const message = new Uint8Array(
+    XANNOUNCE.length +
+      1 +
+      elements.length * SET_ELEMENT_OCTETS +
+      headerHashBytes.length,
+  )
+
+  let offset = 0
+  message.set(XANNOUNCE, offset)
+  offset += XANNOUNCE.length
+  message[offset] = Number(tranche)
+  offset += 1
+  for (const element of elements) {
+    message.set(element, offset)
+    offset += SET_ELEMENT_OCTETS
+  }
+  message.set(headerHashBytes, offset)
+
+  return message
+}
+
 export function verifyAnnouncementSignature(
   announcement: AuditAnnouncement,
   validatorPublicKey: Uint8Array,
 ): Safe<boolean> {
-  // Step 3: Construct the message according to Gray Paper Eq. 82:
-  // message = Xannounce ∥ n ∥ x_n ∥ blake{H}
-  // where:
-  // - Xannounce = "jam_announce" token
-  // - n = tranche number
-  // - x_n = encoded work report set
-  // - blake{H} = Blake2b hash of block header
-
-  // Convert tranche number to bytes (8 bytes, little-endian)
-  const trancheBytes = new Uint8Array(8)
-  new DataView(trancheBytes.buffer).setBigUint64(
-    0,
-    BigInt(announcement.tranche),
-    true,
+  const message = buildAnnouncementMessage(
+    announcement.announcement.workReports,
+    announcement.tranche,
+    announcement.headerHash,
   )
-
-  // Encode work report set (x_n)
-  // This would typically be the serialized list of work reports
-  // For now, we'll create a simple encoding of the work reports
-  const workReportSetBytes = new Uint8Array(
-    announcement.announcement.workReports.length * 36, // 4 bytes coreIndex + 32 bytes hash
-  )
-  const workReportView = new DataView(workReportSetBytes.buffer)
-  let offset = 0
-  for (const workReport of announcement.announcement.workReports) {
-    workReportView.setUint32(offset, Number(workReport.coreIndex), true)
-    workReportSetBytes.set(hexToBytes(workReport.workReportHash), offset + 4)
-    offset += 36
-  }
-
-  // Blake2b hash of block header (blake{H})
-  const headerHashBytes = hexToBytes(announcement.headerHash)
-
-  // Construct the complete message
-  const message = new Uint8Array(
-    XANNOUNCE.length +
-      trancheBytes.length +
-      workReportSetBytes.length +
-      headerHashBytes.length,
-  )
-  offset = 0
-  message.set(XANNOUNCE, offset)
-  offset += XANNOUNCE.length
-  message.set(trancheBytes, offset)
-  offset += trancheBytes.length
-  message.set(workReportSetBytes, offset)
-  offset += workReportSetBytes.length
-  message.set(headerHashBytes, offset)
-
-  // Step 4: Verify the Ed25519 signature
   const signatureBytes = hexToBytes(announcement.announcement.signature)
 
   return verifyEd25519(message, signatureBytes, validatorPublicKey)
 }
 
-/**
- * Generate Ed25519 announcement signature according to Gray Paper Eq. 82
- *
- * Gray Paper Specification:
- * S ≡ edsignature{activeset[v]_ed}{Xannounce ∥ n ∥ x_n ∥ blake{H}}
- * where:
- * - Xannounce = "jam_announce" token
- * - n = tranche number
- * - x_n = encode{set{build{encode[2]{c} ∥ blake{w}}{wrc ∈ local_tranche_n}}}
- * - blake{H} = Blake2b hash of block header
- *
- * @param validatorSecretKey - Ed25519 secret key of the validator
- * @param workReports - Array of work reports to announce
- * @param tranche - Tranche number
- * @param headerHash - Blake2b hash of block header
- * @returns Ed25519 signature (64 bytes) as hex string
- */
 export function generateAnnouncementSignature(
   validatorSecretKey: Uint8Array,
   workReports: Array<{ coreIndex: number; workReportHash: Hex }>,
   tranche: number,
   headerHash: Hex,
 ): Safe<Hex> {
-  // Validate inputs
   if (validatorSecretKey.length !== 32) {
     return safeError(new Error('Validator secret key must be 32 bytes'))
   }
@@ -124,45 +86,8 @@ export function generateAnnouncementSignature(
   }
 
   try {
-    // Step 1: Construct the message according to Gray Paper Eq. 82
+    const message = buildAnnouncementMessage(workReports, tranche, headerHash)
 
-    // Convert tranche number to bytes (8 bytes, little-endian)
-    const trancheBytes = new Uint8Array(8)
-    new DataView(trancheBytes.buffer).setBigUint64(0, BigInt(tranche), true)
-
-    // Encode work report set (x_n) according to Gray Paper:
-    // encode{set{build{encode[2]{c} ∥ blake{w}}{wrc ∈ local_tranche_n}}}
-    const workReportSetBytes = new Uint8Array(
-      workReports.length * 36, // 4 bytes coreIndex + 32 bytes hash
-    )
-    const workReportView = new DataView(workReportSetBytes.buffer)
-    let offset = 0
-    for (const workReport of workReports) {
-      workReportView.setUint32(offset, Number(workReport.coreIndex), true)
-      workReportSetBytes.set(hexToBytes(workReport.workReportHash), offset + 4)
-      offset += 36
-    }
-
-    // Blake2b hash of block header (blake{H})
-    const headerHashBytes = hexToBytes(headerHash)
-
-    // Construct the complete message: Xannounce ∥ n ∥ x_n ∥ blake{H}
-    const message = new Uint8Array(
-      XANNOUNCE.length +
-        trancheBytes.length +
-        workReportSetBytes.length +
-        headerHashBytes.length,
-    )
-    offset = 0
-    message.set(XANNOUNCE, offset)
-    offset += XANNOUNCE.length
-    message.set(trancheBytes, offset)
-    offset += trancheBytes.length
-    message.set(workReportSetBytes, offset)
-    offset += workReportSetBytes.length
-    message.set(headerHashBytes, offset)
-
-    // Step 2: Generate Ed25519 signature
     const [signatureError, signature] = signEd25519(message, validatorSecretKey)
     if (signatureError) {
       return safeError(signatureError)

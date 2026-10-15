@@ -1,15 +1,6 @@
-/**
- * Affine Column for Plonk
- *
- * Represents a column of affine curve points in evaluation form
- */
-
 import type { Domain } from '../domain/domain.ts'
 import { FieldColumn } from '../domain/domain.ts'
 
-/**
- * Affine column representing points on a curve
- */
 export class AffineColumn {
   public readonly points: Array<{ x: bigint; y: bigint }>
   public readonly xs: FieldColumn
@@ -25,9 +16,6 @@ export class AffineColumn {
     this.ys = ys
   }
 
-  /**
-   * Create private column (witness column)
-   */
   static privateColumn(
     points: Array<{ x: bigint; y: bigint }>,
     domain: Domain,
@@ -35,7 +23,6 @@ export class AffineColumn {
     const xs = points.map((p) => p.x)
     const ys = points.map((p) => p.y)
 
-    // Pad to domain size if needed
     while (xs.length < domain.size) {
       xs.push(0n)
       ys.push(0n)
@@ -47,9 +34,6 @@ export class AffineColumn {
     return new AffineColumn(points, xsCol, ysCol)
   }
 
-  /**
-   * Create public column (fixed column)
-   */
   static publicColumn(
     points: Array<{ x: bigint; y: bigint }>,
     domain: Domain,
@@ -57,9 +41,6 @@ export class AffineColumn {
     return AffineColumn.privateColumn(points, domain)
   }
 
-  /**
-   * Evaluate at point z
-   */
   evaluate(z: bigint): [bigint, bigint] {
     return [this.xs.evaluate(z), this.ys.evaluate(z)]
   }
