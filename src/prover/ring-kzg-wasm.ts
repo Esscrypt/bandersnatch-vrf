@@ -22,8 +22,7 @@ export class RingVRFProverWasm {
     this.srsBytes = readFileSync(srsFilePath)
   }
 
-  async init(): Promise<void> {
-  }
+  async init(): Promise<void> {}
 
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
     const pedersenInput = {

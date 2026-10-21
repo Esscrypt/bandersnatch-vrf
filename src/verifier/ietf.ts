@@ -44,7 +44,6 @@ export class IETFVRFVerifier {
     proof: Uint8Array,
     auxData?: Uint8Array,
   ): boolean {
-
     if (proof.length !== 96) {
       return false
     }

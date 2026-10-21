@@ -92,8 +92,7 @@ export class SimplePlonkTranscript implements PlonkTranscript<Uint8Array> {
     return result
   }
 
-  addProtocolParams(_domain: unknown, _pcsRawVk: unknown): void {
-  }
+  addProtocolParams(_domain: unknown, _pcsRawVk: unknown): void {}
 
   addPrecommittedCols(precommittedCols: [Uint8Array, Uint8Array]): void {
     this.append(precommittedCols[0]!)

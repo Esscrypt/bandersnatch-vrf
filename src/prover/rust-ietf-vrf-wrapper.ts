@@ -49,8 +49,7 @@ try {
       )
     }
   }
-} catch {
-}
+} catch {}
 
 export function getRustProveIetfVrf(): ProveIetfVrfRust | null {
   return rustProveIetfVrf

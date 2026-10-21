@@ -285,7 +285,6 @@ export function verifyBandersnatchVRFEvidence(
       verifier,
     )
   } else {
-
     return verifyTrancheNAuditSignature(
       announcerBandersnatchPublicKey,
       announcement.evidence,
@@ -325,7 +324,6 @@ function verifyTranche0WorkReportSelection(
   availableCoreWorkReports: Map<number, WorkReport[]>,
   bandersnatchVrfOutput: Hex,
 ): Safe<boolean> {
-
   const shuffledSequence = jamShuffle(
     availableCoreWorkReports.entries().toArray(),
     bandersnatchVrfOutput,
@@ -366,13 +364,11 @@ function verifyTrancheNWorkReportSelection(
   configService: IConfigService,
   _previousTrancheAnnouncements: AuditAnnouncement[],
 ): Safe<boolean> {
-
   const CAUDITBIASFACTOR = 2
 
   const biasThreshold = configService.numValidators / (256 * CAUDITBIASFACTOR)
 
   for (const _announcedWorkReport of announcement.announcement.workReports) {
-
     const previousAnnouncers = new Set<number>()
 
     const positiveJudgments = new Set<number>()

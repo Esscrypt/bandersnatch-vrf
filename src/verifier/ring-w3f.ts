@@ -56,8 +56,7 @@ export class RingVRFVerifierW3F {
     this.backend = backend
   }
 
-  async init(): Promise<void> {
-  }
+  async init(): Promise<void> {}
 
   verify(
     ringKeys: Uint8Array[],

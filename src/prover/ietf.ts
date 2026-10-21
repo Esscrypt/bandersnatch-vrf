@@ -77,7 +77,6 @@ export class IETFVRFProver {
     gamma: Uint8Array,
     auxData?: Uint8Array,
   ): Uint8Array {
-
     const alphaBytesChecked = this.usePaddingPointIfZero(alpha)
     const gammaBytesChecked = this.usePaddingPointIfZero(gamma)
     const alphaPoint = BandersnatchCurve.bytesToPoint(alphaBytesChecked)

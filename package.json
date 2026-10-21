@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/Esscrypt/bandersnatch-vrf/issues"
   },
-  "version": "0.8.0",
+  "version": "0.8.0-rc1",
   "type": "module",
   "scripts": {
     "build": "bun run build:native && tsc",

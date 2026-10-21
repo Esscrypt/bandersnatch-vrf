@@ -252,8 +252,7 @@ try {
       )
     }
   }
-} catch {
-}
+} catch {}
 
 export function getRustProveRingProof(): ProveRingProofRust | null {
   return rustProveRingProof

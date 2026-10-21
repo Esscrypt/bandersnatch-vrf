@@ -35,8 +35,7 @@ export class RingVRFProverW3F {
     this.srsBytes = readFileSync(srsFilePathOrOptions)
   }
 
-  async init(): Promise<void> {
-  }
+  async init(): Promise<void> {}
 
   prove(secretKey: Uint8Array, input: RingVRFInput): RingVRFResult {
     if (this.backend) {

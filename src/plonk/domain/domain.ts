@@ -289,4 +289,3 @@ export class FieldColumn {
     return this.poly.evaluate(z)
   }
 }
-

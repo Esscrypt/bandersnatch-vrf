@@ -20,8 +20,7 @@ export class RingVRFVerifierWasm {
     this.srsBytes = readFileSync(srsFilePath)
   }
 
-  async init(): Promise<void> {
-  }
+  async init(): Promise<void> {}
 
   verify(
     ringKeys: Uint8Array[],

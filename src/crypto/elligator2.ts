@@ -379,7 +379,6 @@ export function addPoints(p1: CurvePoint, p2: CurvePoint): CurvePoint {
   const d = BANDERSNATCH_PARAMS.CURVE_COEFFICIENTS.d
 
   if (p1.x === p2.x && p1.y === p2.y) {
-
     const x1 = p1.x
     const y1 = p1.y
 
