@@ -1,5 +1,7 @@
 use crate::vrf::codec::{blinding_base, enc_point, generator, TAG_PEDERSEN_BLINDING, TAG_PEDERSEN_VRF};
-use crate::vrf::procedures::{challenge, is_valid_point, nonce, vrf_transcript, Pair};
+use crate::vrf::procedures::{
+    challenge, is_in_group, is_valid_point, nonce, vrf_transcript, Pair,
+};
 use crate::vrf::transcript::Transcript;
 use ark_ec::CurveGroup;
 use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fr};
@@ -37,7 +39,13 @@ pub fn prove(x: &Fr, io: &[Pair], ad: &[u8]) -> (Proof, Fr) {
 }
 
 pub fn verify(io: &[Pair], ad: &[u8], p: &Proof) -> bool {
-    if !is_valid_point(&p.pk_com) || !is_valid_point(&p.r) || !is_valid_point(&p.ok) || io.iter().any(|(ii, oi)| !is_valid_point(ii) || !is_valid_point(oi)) {
+    if !is_valid_point(&p.pk_com)
+        || !is_in_group(&p.r)
+        || !is_in_group(&p.ok)
+        || io
+            .iter()
+            .any(|(ii, oi)| !is_valid_point(ii) || !is_valid_point(oi))
+    {
         return false;
     }
     let g = generator();

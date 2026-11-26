@@ -7,4 +7,4 @@ pub mod thin;
 pub mod pedersen;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

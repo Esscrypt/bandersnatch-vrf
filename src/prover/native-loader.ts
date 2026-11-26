@@ -39,6 +39,26 @@ export interface RingProofNativeBinding {
     proofBytes: Buffer,
     auxData: Buffer,
   ) => boolean
+  proveThinVrf?: (
+    secretKeyBytes: Buffer,
+    alphaBytes: Buffer,
+    adBytes: Buffer,
+  ) => Buffer
+  verifyThinVrf?: (
+    publicKeyBytes: Buffer,
+    alphaBytes: Buffer,
+    proofBytes: Buffer,
+    adBytes: Buffer,
+  ) => boolean
+  verifyThinVrfParts?: (
+    publicKeyBytes: Buffer,
+    alphaBytes: Buffer,
+    outputPointBytes: Buffer,
+    proofRBytes: Buffer,
+    proofSBytes: Buffer,
+    adBytes: Buffer,
+  ) => boolean
+  thinVrfOutput?: (outputPointBytes: Buffer) => Uint8Array
 }
 
 function getRingProofNativeFallbackPaths(): string[] {

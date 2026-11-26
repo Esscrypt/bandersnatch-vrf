@@ -1,5 +1,7 @@
 use crate::vrf::codec::{generator, TAG_THIN_VRF};
-use crate::vrf::procedures::{challenge, is_valid_point, nonce, vrf_transcript, Pair};
+use crate::vrf::procedures::{
+    challenge, is_in_group, is_valid_point, nonce, vrf_transcript, Pair,
+};
 use ark_ec::CurveGroup;
 use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fr};
 
@@ -22,7 +24,12 @@ pub fn prove(x: &Fr, io: &[Pair], ad: &[u8]) -> (EdwardsAffine, Fr) {
 }
 
 pub fn verify(y: &EdwardsAffine, io: &[Pair], ad: &[u8], r: &EdwardsAffine, s: &Fr) -> bool {
-    if !is_valid_point(y) || !is_valid_point(r) || io.iter().any(|(ii, oi)| !is_valid_point(ii) || !is_valid_point(oi)) {
+    if !is_valid_point(y)
+        || !is_in_group(r)
+        || io
+            .iter()
+            .any(|(ii, oi)| !is_valid_point(ii) || !is_valid_point(oi))
+    {
         return false;
     }
     let (t, (im, om)) = vrf_transcript(TAG_THIN_VRF, &with_schnorr(*y, io), ad);

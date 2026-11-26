@@ -1,4 +1,5 @@
 pub mod ietf;
+pub mod thin_vrf;
 pub mod vrf;
 
 use napi::bindgen_prelude::*;

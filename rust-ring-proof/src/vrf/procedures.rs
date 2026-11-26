@@ -5,7 +5,12 @@ use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, EdwardsProjective, Fr};
 use ark_ff::Zero;
 
 pub fn is_valid_point(p: &EdwardsAffine) -> bool {
-    !p.is_zero() && p.is_on_curve() && p.is_in_correct_subgroup_assuming_on_curve()
+    !p.is_zero() && is_in_group(p)
+}
+
+#[must_use]
+pub fn is_in_group(p: &EdwardsAffine) -> bool {
+    p.is_on_curve() && p.is_in_correct_subgroup_assuming_on_curve()
 }
 
 pub type Pair = (EdwardsAffine, EdwardsAffine);
@@ -65,4 +70,21 @@ pub fn challenge(points: &[EdwardsAffine], t: &mut Transcript) -> Fr {
         t.absorb(&enc_point(p));
     }
     dec_scalar_mod(&t.squeeze(CHALLENGE_LEN))
+}
+
+#[cfg(test)]
+mod point_validity_tests {
+    use super::{is_in_group, is_valid_point};
+    use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
+    use ark_ff::Zero;
+
+    #[test]
+    fn the_identity_is_in_the_group() {
+        assert!(is_in_group(&EdwardsAffine::zero()));
+    }
+
+    #[test]
+    fn the_identity_is_not_a_valid_key_or_io_point() {
+        assert!(!is_valid_point(&EdwardsAffine::zero()));
+    }
 }
